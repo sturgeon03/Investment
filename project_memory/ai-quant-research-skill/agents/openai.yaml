@@ -1,0 +1,7 @@
+interface:
+  display_name: "AI Quant Research"
+  short_description: "Continue this repo as a rigorous AI quant research program"
+  default_prompt: "Use $ai-quant-research-skill to continue the Investment repository in the intended AI quant direction."
+
+policy:
+  allow_implicit_invocation: true

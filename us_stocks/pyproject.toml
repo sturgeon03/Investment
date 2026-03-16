@@ -26,6 +26,7 @@ us-invest-ai-extract-sec = "us_invest_ai.extract_sec_sections:main"
 us-invest-ai-daily = "us_invest_ai.daily_workflow:main"
 us-invest-ai-report = "us_invest_ai.performance_report:main"
 us-invest-ai-ml-report = "us_invest_ai.supervised_ml_report:main"
+us-invest-ai-dl-report = "us_invest_ai.deep_learning_report:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
