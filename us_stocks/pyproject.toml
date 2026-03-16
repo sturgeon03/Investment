@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "us-invest-ai"
+version = "0.1.0"
+description = "Starter pipeline for US equities AI investing research"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "PyYAML>=6.0",
+    "requests>=2.32",
+    "yfinance>=0.2.54",
+]
+
+[project.scripts]
+us-invest-ai = "us_invest_ai.main:main"
+us-invest-ai-score-docs = "us_invest_ai.score_documents:main"
+us-invest-ai-compare = "us_invest_ai.compare_configs:main"
+us-invest-ai-fetch-sec = "us_invest_ai.fetch_sec_filings:main"
+us-invest-ai-extract-sec = "us_invest_ai.extract_sec_sections:main"
+us-invest-ai-daily = "us_invest_ai.daily_workflow:main"
+us-invest-ai-report = "us_invest_ai.performance_report:main"
+us-invest-ai-ml-report = "us_invest_ai.supervised_ml_report:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

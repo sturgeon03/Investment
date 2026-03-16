@@ -1,0 +1,11 @@
+date,ticker,doc_type,source,title,text
+2025-01-28,NVDA,news,Synthetic,Cloud demand remains elevated,"Large cloud customers continued expanding AI server orders, backlog stayed healthy, and supplier commentary suggested solid near-term demand."
+2025-01-29,META,news,Synthetic,European ad practices face scrutiny,"European regulators increased scrutiny of ad-targeting practices, raising the risk of compliance costs and a slower monetization ramp."
+2025-01-30,AAPL,earnings,Synthetic,Services growth offsets hardware softness,"Services revenue improved, free cash flow stayed strong, and management kept a stable outlook despite mixed hardware demand."
+2025-02-11,AMZN,earnings,Synthetic,AWS reacceleration supports margin outlook,"AWS growth reaccelerated, capex remained elevated for AI infrastructure, and management implied operating leverage could improve."
+2025-02-14,JPM,news,Synthetic,Credit costs remain contained,"Consumer credit metrics stayed manageable and management commentary pointed to resilient balance-sheet quality."
+2025-02-20,XOM,news,Synthetic,Refining margins soften,"Refining margins weakened and downstream profitability looked softer than the prior quarter."
+2025-03-03,GOOGL,news,Synthetic,Search monetization stable but antitrust risk persists,"Core advertising trends remained stable, but ongoing antitrust actions could constrain distribution economics."
+2025-03-05,MSFT,news,Synthetic,Enterprise AI demand supports backlog,"Enterprise demand for AI workloads supported backlog growth and management pointed to durable cloud spending."
+2025-03-07,COST,earnings,Synthetic,Traffic and renewal trends stay healthy,"Membership renewal trends held up well and customer traffic stayed firm, supporting defensive earnings quality."
+2025-03-10,AVGO,earnings,Synthetic,Custom silicon momentum improves,"Custom silicon demand improved, networking remained firm, and management described a constructive product cycle."
