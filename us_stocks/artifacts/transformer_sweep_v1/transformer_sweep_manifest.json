@@ -1,0 +1,210 @@
+{
+  "config": {
+    "backtest": {
+      "transaction_cost_bps": 10.0
+    },
+    "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_60_dynamic_eligibility.yaml",
+    "data": {
+      "benchmark": "SPY",
+      "end": null,
+      "metadata_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60_metadata.csv",
+      "start": "2018-01-01",
+      "tickers": [
+        "AAPL",
+        "ABBV",
+        "ABT",
+        "ACN",
+        "ADBE",
+        "AMD",
+        "AMGN",
+        "AMZN",
+        "AVGO",
+        "AXP",
+        "BA",
+        "BKNG",
+        "C",
+        "CAT",
+        "CMCSA",
+        "COP",
+        "COST",
+        "CRM",
+        "CSCO",
+        "CVX",
+        "DHR",
+        "DIS",
+        "GE",
+        "GILD",
+        "GOOGL",
+        "GS",
+        "HD",
+        "IBM",
+        "INTC",
+        "INTU",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LIN",
+        "LLY",
+        "LOW",
+        "MA",
+        "MCD",
+        "META",
+        "MMM",
+        "MRK",
+        "MSFT",
+        "NEE",
+        "NFLX",
+        "NVDA",
+        "ORCL",
+        "PEP",
+        "PFE",
+        "PG",
+        "PM",
+        "QCOM",
+        "RTX",
+        "SBUX",
+        "SCHW",
+        "T",
+        "TMO",
+        "TXN",
+        "UNH",
+        "UNP",
+        "XOM"
+      ],
+      "tickers_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60.txt",
+      "universe_snapshots_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\generated\\liquid_large_cap_60_dynamic_snapshots.csv"
+    },
+    "eligibility": {
+      "min_close_price": 5.0,
+      "min_dollar_volume_20": 50000000.0,
+      "min_universe_age_days": 120
+    },
+    "llm": {
+      "enabled": false,
+      "horizon_bucket": "swing",
+      "signal_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\signals\\llm_scores.generated.csv"
+    },
+    "output": {
+      "artifacts_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_60_dynamic_eligibility",
+      "data_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility"
+    },
+    "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks",
+    "risk": {
+      "allow_fractional_shares": true,
+      "capital_base": 100000.0,
+      "cash_buffer": 0.04,
+      "max_position_weight": 0.12,
+      "min_trade_notional": 250.0
+    },
+    "scoring": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "base_url": "https://api.deepseek.com",
+      "env_file": null,
+      "model": "deepseek-chat",
+      "provider": "heuristic",
+      "temperature": 0.0,
+      "timeout_seconds": 60
+    },
+    "strategy": {
+      "llm_weight": 0.0,
+      "min_history_days": 200,
+      "momentum_20_weight": 0.45,
+      "momentum_60_weight": 0.35,
+      "rebalance": "monthly",
+      "top_n": 8,
+      "trend_filter_mode": "soft",
+      "trend_penalty": 0.35,
+      "volatility_weight": -0.2
+    },
+    "workflow": {
+      "apply_paper_orders": false,
+      "forms": [
+        "10-K",
+        "10-Q",
+        "8-K"
+      ],
+      "limit_per_ticker": 1,
+      "max_chars": 200000,
+      "min_section_chars": 250,
+      "output_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\runs",
+      "pause_seconds": 0.25,
+      "positions_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\paper\\current_positions.csv",
+      "start_date_lookback_days": 180
+    }
+  },
+  "config_file_sha256": "d8ee9ce8494f79c476efccd173fe26760b2053c6f8ac895b8285852949471400",
+  "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_60_dynamic_eligibility.yaml",
+  "config_snapshot_sha256": "3224e5992e2b83d548339313f77a287a217234337fcb0fb372be7a7d03e72654",
+  "experiment_name": "transformer_sweep",
+  "extra": {
+    "best_transformer_name": "transformer_d4_lb252",
+    "embargo_days": 20,
+    "label_horizon_days": 20,
+    "latest_market_date": "2026-03-17",
+    "lookback_days": 365,
+    "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
+    "market_data_manifest_sha256": "2e5a4634472eabef19625ba961203c1dc614512e88283ed7535cd266f07eb3ce",
+    "market_data_source": "cache",
+    "min_training_samples": 252,
+    "min_validation_samples": 120,
+    "sequence_lookback_window": 20,
+    "step_trading_days": 252,
+    "transformer_model_dims": [
+      4,
+      8
+    ],
+    "transformer_training_lookback_days": [
+      126,
+      252
+    ],
+    "validation_window_days": 60,
+    "window_count": 4,
+    "window_trading_days": 252
+  },
+  "generated_at_utc": "2026-03-18T16:35:38.589636+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "714140b92f570aaa7e211ca44d6cabacbbb6ff8f",
+    "dirty": true
+  },
+  "inputs": {
+    "llm_signal_path": null,
+    "llm_signal_sha256": null,
+    "metadata_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60_metadata.csv",
+    "metadata_file_sha256": "13919401f73b70a6ac7441aa26002a5e4fe1214cd218e4960509ade85d788e61",
+    "tickers_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60.txt",
+    "tickers_file_sha256": "e45b98c179e338b9c8f9b2e7798f75a021aff1b7d9a3442547c83e37bb7bb898",
+    "universe_snapshots_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\generated\\liquid_large_cap_60_dynamic_snapshots.csv",
+    "universe_snapshots_file_sha256": "b796c41a685fcd7a1b76f44422a8bc933345c39f215563c24f9eaf7306369d31",
+    "universe_snapshots_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\generated\\liquid_large_cap_60_dynamic_snapshots.manifest.json",
+    "universe_snapshots_manifest_sha256": "0ce4d2714d298041fb13fff0110a0b6ee77934fbc1d853146bc1d63c0e034bb0"
+  },
+  "output_files": {
+    "focus_chart": {
+      "exists": true,
+      "path": "us_stocks\\artifacts\\transformer_sweep_v1\\transformer_stability_focus.svg",
+      "sha256": "efe3b653ea98a028fc8d5f4df901d1c04636641c8259e79be2ec758290143481"
+    },
+    "focus_table": {
+      "exists": true,
+      "path": "us_stocks\\artifacts\\transformer_sweep_v1\\transformer_stability_focus.csv",
+      "sha256": "621b5e36bb4c62229a93160554296e15d83e5cbf5e46d52c239503a8cc6e69d4"
+    },
+    "last_year_sweep": {
+      "exists": true,
+      "path": "us_stocks\\artifacts\\transformer_sweep_v1\\transformer_last_year_sweep.csv",
+      "sha256": "c48c2b4156054c0f12c506be58c0e3ce5f74f76fdef520edbc8d33d8937e6d46"
+    },
+    "stability_sweep": {
+      "exists": true,
+      "path": "us_stocks\\artifacts\\transformer_sweep_v1\\transformer_stability_sweep.csv",
+      "sha256": "42ac8c8f13b81cdd2819bbfdc44d566b40809650298bec93824ff6991dc353e2"
+    },
+    "window_summary": {
+      "exists": true,
+      "path": "us_stocks\\artifacts\\transformer_sweep_v1\\transformer_window_summary.csv",
+      "sha256": "737d7728756f33128645a3e6ae4a5d0e7052ac73375553c031cf5ff254409b2e"
+    }
+  },
+  "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks"
+}

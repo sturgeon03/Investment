@@ -99,6 +99,12 @@ python -m us_invest_ai.deep_learning_report --config .\us_stocks\config\soft_pri
 python -m us_invest_ai.stability_report --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --output-dir .\us_stocks\artifacts\stability_large_cap_60_dynamic_eligibility
 ```
 
+Run the focused transformer robustness sweep:
+
+```powershell
+python -m us_invest_ai.transformer_sweep --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --transformer-model-dims 4,8 --transformer-training-lookback-days 126,252 --output-dir .\us_stocks\artifacts\transformer_sweep_v1
+```
+
 Generate a portfolio snapshot and order preview from an optional positions file:
 
 ```powershell
@@ -216,8 +222,9 @@ Use `soft_price.yaml` as the control when you want to separate the impact of `so
 The supervised model reports now write a `report_manifest.json` alongside their CSV and SVG outputs.
 
 - `us-invest-ai-ml-report`: rule baseline vs supervised ridge
-- `us-invest-ai-dl-report`: rule baseline vs walk-forward ridge, gradient-boosted tree, MLP, and TCN
-- `us-invest-ai-stability-report`: repeated OOS windows across rules, ridge, tree, MLP, and TCN
+- `us-invest-ai-dl-report`: rule baseline vs walk-forward ridge, gradient-boosted tree, MLP, TCN, hybrid sequence, LSTM, and transformer
+- `us-invest-ai-stability-report`: repeated OOS windows across rules, ridge, tree, MLP, TCN, hybrid sequence, LSTM, and transformer
+- `us-invest-ai-transformer-sweep`: focused baseline-vs-transformer robustness sweep across model size and rolling training-window choices
 
 Those report manifests now also include the `market_data_manifest.json` path and hash, so repeated runs can tell whether they used a matching raw cache or a fresh download.
 
@@ -300,6 +307,56 @@ Interpretation:
 - this is still useful because it gives the repo a real sequence-model control instead of only tabular learned models
 - the next sequence step should be `LSTM or hybrid sequence + static context`, not RL and not more workflow work
 
+The second sequence baseline is now also in place on that same lane:
+
+- dynamic 60-name + eligibility + hybrid sequence, latest 1-year OOS ending capital: `hybrid $115,056`
+- dynamic 60-name + eligibility + hybrid sequence, repeated 4-window average ending capital: `hybrid $113,074`
+
+Interpretation:
+
+- the hybrid sequence model materially improves on the pure TCN baseline
+- in the latest 1-year window it beats TCN, MLP, and tree, but still trails ridge and the rules baseline
+- across repeated windows it beats MLP and TCN on average, but it still trails the tree leader, the rules baseline, and ridge
+- the next model step should now be a recurrent sequence follow-up, most likely `LSTM`, not RL
+
+The recurrent sequence follow-up is now also in place on that same lane:
+
+- dynamic 60-name + eligibility + LSTM, latest 1-year OOS ending capital: `LSTM $107,684`
+- dynamic 60-name + eligibility + LSTM, repeated 4-window average ending capital: `LSTM $110,121`
+
+Interpretation:
+
+- the first recurrent baseline underperforms not only the rules baseline and tree model, but also hybrid, MLP, and TCN on repeated-window average
+- this is still useful negative evidence because it shows that adding recurrence alone does not close the gap
+- the next model step should now be a transformer-style sequence baseline or a sequence-objective redesign, not RL
+
+The transformer-style sequence follow-up is now also in place on that same lane:
+
+- dynamic 60-name + eligibility + transformer, latest 1-year OOS ending capital: `transformer $123,134`
+- dynamic 60-name + eligibility + transformer, focused repeated 4-window average ending capital: `transformer $120,520` vs baseline `$115,607`
+
+Interpretation:
+
+- this is the first learned model in the repo to beat the rules baseline on the latest strict 1-year dynamic-lane report
+- in the focused repeated-window comparison against the same baseline windows, it also beats the rules baseline on average and in `2/4` windows
+- its repeated-window average also exceeds the previously leading tree model's `~$119,183` on the same lane
+- the next stage should now focus on hardening the transformer lane and adding lighter-weight focused comparison tooling, not jumping to RL
+
+The first focused transformer sweep is now also in place:
+
+- sweep artifact root: `artifacts/transformer_sweep_v1`
+- tested grid: `model_dim in {4, 8}`, `training_lookback_days in {126, 252}`
+- best latest 1-year and repeated-window combo: `transformer_d4_lb252`
+- `transformer_d4_lb252`, latest 1-year OOS ending capital: `$125,527` vs baseline `$118,294`
+- `transformer_d4_lb252`, repeated 4-window average ending capital: `$120,520` vs baseline `$115,607`
+
+Interpretation:
+
+- a smaller transformer with a longer rolling training window is currently the strongest learned model in the repo
+- shorter rolling windows degrade performance materially
+- larger model size does not help under the current data regime
+- the next gain is more likely to come from objective design, sequence-lookback tuning, and execution realism than from simply making the model wider
+
 The lane-to-lane comparison artifacts are:
 
 - `artifacts/universe_lane_comparison/last_year_lane_comparison.csv`
@@ -349,6 +406,6 @@ The recommended order remains:
 
 1. Keep the dynamic 60-name lane and repeated-window stability report as the default reality check.
 2. Keep true point-in-time constituent data as backlog, but treat the current dynamic lane as the standing control until then.
-3. Add a stronger second sequence baseline next, likely `LSTM` or a `hybrid sequence + static context` model.
+3. Continue hardening the transformer lane next with deeper robustness checks, now that focused sweep tooling exists and `transformer_d4_lb252` is the current best learned setup.
 4. Treat LLM signals as auxiliary inputs, not as the center of the research program.
 5. Leave reinforcement learning until the price-model lane is clearly credible.

@@ -11,17 +11,23 @@ from us_invest_ai.config import load_config
 from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.dl_strategy import MLPModelConfig, generate_mlp_target_weights
 from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
+from us_invest_ai.hybrid_sequence_strategy import (
+    HybridSequenceModelConfig,
+    generate_hybrid_sequence_target_weights,
+)
+from us_invest_ai.lstm_strategy import LSTMModelConfig, generate_lstm_target_weights
 from us_invest_ai.ml_strategy import MLModelConfig, generate_ridge_walkforward_target_weights
 from us_invest_ai.performance_report import _build_svg
 from us_invest_ai.signals import load_llm_scores
 from us_invest_ai.strategy import generate_target_weights
 from us_invest_ai.tcn_strategy import TCNModelConfig, generate_tcn_target_weights
+from us_invest_ai.transformer_strategy import TransformerModelConfig, generate_transformer_target_weights
 from us_invest_ai.tree_strategy import TreeModelConfig, generate_tree_target_weights
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare rules, ridge, tree, MLP, and TCN walk-forward models on the last year."
+        description="Compare rules, ridge, tree, MLP, TCN, hybrid sequence, LSTM, and transformer walk-forward models on the last year."
     )
     parser.add_argument(
         "--config",
@@ -183,6 +189,30 @@ def _parse_args() -> argparse.Namespace:
         type=int,
         default=15,
         help="Early-stopping patience for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--hybrid-static-hidden-dim",
+        type=int,
+        default=16,
+        help="Hidden dimension for the static branch inside the hybrid sequence baseline.",
+    )
+    parser.add_argument(
+        "--lstm-hidden-dim",
+        type=int,
+        default=12,
+        help="Hidden dimension for the LSTM baseline.",
+    )
+    parser.add_argument(
+        "--transformer-model-dim",
+        type=int,
+        default=4,
+        help="Model dimension for the transformer-style baseline.",
+    )
+    parser.add_argument(
+        "--transformer-training-lookback-days",
+        type=int,
+        default=252,
+        help="Rolling training-window length in trading days for the transformer-style baseline.",
     )
     parser.add_argument(
         "--initial-capital",
@@ -431,18 +461,103 @@ def main() -> None:
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
+    hybrid_weights, hybrid_history = generate_hybrid_sequence_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=HybridSequenceModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            kernel_size=args.sequence_kernel_size,
+            sequence_hidden_channels=args.sequence_hidden_channels,
+            static_hidden_dim=args.hybrid_static_hidden_dim,
+            learning_rate=args.sequence_learning_rate,
+            max_epochs=args.sequence_max_epochs,
+            batch_size=args.sequence_batch_size,
+            weight_decay=args.sequence_weight_decay,
+            patience=args.sequence_patience,
+        ),
+        eval_start=eval_start,
+        llm_scores=llm_scores,
+    )
+    hybrid_result = run_backtest(
+        prices=prices,
+        target_weights=hybrid_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
+    lstm_weights, lstm_history = generate_lstm_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=LSTMModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            hidden_dim=args.lstm_hidden_dim,
+            learning_rate=args.sequence_learning_rate,
+            max_epochs=args.sequence_max_epochs,
+            batch_size=args.sequence_batch_size,
+            weight_decay=args.sequence_weight_decay,
+            patience=args.sequence_patience,
+        ),
+        eval_start=eval_start,
+        llm_scores=llm_scores,
+    )
+    lstm_result = run_backtest(
+        prices=prices,
+        target_weights=lstm_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
+    transformer_weights, transformer_history = generate_transformer_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=TransformerModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            training_lookback_days=args.transformer_training_lookback_days,
+            model_dim=args.transformer_model_dim,
+        ),
+        eval_start=eval_start,
+        llm_scores=llm_scores,
+    )
+    transformer_result = run_backtest(
+        prices=prices,
+        target_weights=transformer_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
 
     baseline_returns = baseline_result.daily_returns.loc[baseline_result.daily_returns.index >= eval_start]
     ridge_returns = ridge_result.daily_returns.loc[ridge_result.daily_returns.index >= eval_start]
     tree_returns = tree_result.daily_returns.loc[tree_result.daily_returns.index >= eval_start]
     mlp_returns = mlp_result.daily_returns.loc[mlp_result.daily_returns.index >= eval_start]
     tcn_returns = tcn_result.daily_returns.loc[tcn_result.daily_returns.index >= eval_start]
-    eval_start_actual = pd.to_datetime(tcn_returns.index.min()).normalize()
-    eval_end_actual = pd.to_datetime(tcn_returns.index.max()).normalize()
+    hybrid_returns = hybrid_result.daily_returns.loc[hybrid_result.daily_returns.index >= eval_start]
+    lstm_returns = lstm_result.daily_returns.loc[lstm_result.daily_returns.index >= eval_start]
+    transformer_returns = transformer_result.daily_returns.loc[transformer_result.daily_returns.index >= eval_start]
+    eval_start_actual = pd.to_datetime(transformer_returns.index.min()).normalize()
+    eval_end_actual = pd.to_datetime(transformer_returns.index.max()).normalize()
 
     benchmark_returns = None
     if baseline_result.benchmark_returns is not None:
-        benchmark_returns = baseline_result.benchmark_returns.reindex(tcn_returns.index)
+        benchmark_returns = baseline_result.benchmark_returns.reindex(transformer_returns.index)
 
     baseline_summary = build_summary(
         baseline_returns,
@@ -471,12 +586,36 @@ def main() -> None:
         tcn_result.turnover.reindex(tcn_returns.index),
         tcn_result.benchmark_returns.reindex(tcn_returns.index) if tcn_result.benchmark_returns is not None else None,
     )
+    hybrid_summary = build_summary(
+        hybrid_returns,
+        hybrid_result.turnover.reindex(hybrid_returns.index),
+        hybrid_result.benchmark_returns.reindex(hybrid_returns.index)
+        if hybrid_result.benchmark_returns is not None
+        else None,
+    )
+    lstm_summary = build_summary(
+        lstm_returns,
+        lstm_result.turnover.reindex(lstm_returns.index),
+        lstm_result.benchmark_returns.reindex(lstm_returns.index)
+        if lstm_result.benchmark_returns is not None
+        else None,
+    )
+    transformer_summary = build_summary(
+        transformer_returns,
+        transformer_result.turnover.reindex(transformer_returns.index),
+        transformer_result.benchmark_returns.reindex(transformer_returns.index)
+        if transformer_result.benchmark_returns is not None
+        else None,
+    )
 
     baseline_curve = _build_value_curve(baseline_returns, benchmark_returns, args.initial_capital)
     ridge_curve = _build_value_curve(ridge_returns, benchmark_returns, args.initial_capital)
     tree_curve = _build_value_curve(tree_returns, benchmark_returns, args.initial_capital)
     mlp_curve = _build_value_curve(mlp_returns, benchmark_returns, args.initial_capital)
     tcn_curve = _build_value_curve(tcn_returns, benchmark_returns, args.initial_capital)
+    hybrid_curve = _build_value_curve(hybrid_returns, benchmark_returns, args.initial_capital)
+    lstm_curve = _build_value_curve(lstm_returns, benchmark_returns, args.initial_capital)
+    transformer_curve = _build_value_curve(transformer_returns, benchmark_returns, args.initial_capital)
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -528,6 +667,33 @@ def main() -> None:
                 eval_end_actual,
                 args.initial_capital,
             ),
+            _build_summary_row(
+                "hybrid_sequence_walkforward",
+                hybrid_summary,
+                hybrid_history.loc[hybrid_history["date"] >= eval_start_actual],
+                hybrid_curve,
+                eval_start_actual,
+                eval_end_actual,
+                args.initial_capital,
+            ),
+            _build_summary_row(
+                "lstm_walkforward",
+                lstm_summary,
+                lstm_history.loc[lstm_history["date"] >= eval_start_actual],
+                lstm_curve,
+                eval_start_actual,
+                eval_end_actual,
+                args.initial_capital,
+            ),
+            _build_summary_row(
+                "transformer_walkforward",
+                transformer_summary,
+                transformer_history.loc[transformer_history["date"] >= eval_start_actual],
+                transformer_curve,
+                eval_start_actual,
+                eval_end_actual,
+                args.initial_capital,
+            ),
         ],
         ignore_index=True,
     ).sort_values(["ending_capital", "sharpe"], ascending=[False, False]).reset_index(drop=True)
@@ -540,6 +706,9 @@ def main() -> None:
     values_frame["tree_walkforward_value"] = tree_curve["strategy_value"].to_numpy()
     values_frame["mlp_walkforward_value"] = mlp_curve["strategy_value"].to_numpy()
     values_frame["tcn_walkforward_value"] = tcn_curve["strategy_value"].to_numpy()
+    values_frame["hybrid_sequence_walkforward_value"] = hybrid_curve["strategy_value"].to_numpy()
+    values_frame["lstm_walkforward_value"] = lstm_curve["strategy_value"].to_numpy()
+    values_frame["transformer_walkforward_value"] = transformer_curve["strategy_value"].to_numpy()
     if "benchmark_value" in tcn_curve.columns:
         values_frame["benchmark_value"] = tcn_curve["benchmark_value"].to_numpy()
     values_path = output_dir / "deep_learning_values_last_year.csv"
@@ -572,6 +741,21 @@ def main() -> None:
         tcn_history_path,
         index=False,
     )
+    hybrid_history_path = output_dir / "hybrid_sequence_walkforward_history_last_year.csv"
+    hybrid_history.loc[hybrid_history["date"] >= eval_start_actual].to_csv(
+        hybrid_history_path,
+        index=False,
+    )
+    lstm_history_path = output_dir / "lstm_walkforward_history_last_year.csv"
+    lstm_history.loc[lstm_history["date"] >= eval_start_actual].to_csv(
+        lstm_history_path,
+        index=False,
+    )
+    transformer_history_path = output_dir / "transformer_walkforward_history_last_year.csv"
+    transformer_history.loc[transformer_history["date"] >= eval_start_actual].to_csv(
+        transformer_history_path,
+        index=False,
+    )
     manifest = build_run_manifest(
         config,
         experiment_name="deep_learning_report",
@@ -602,6 +786,10 @@ def main() -> None:
             "sequence_batch_size": args.sequence_batch_size,
             "sequence_weight_decay": args.sequence_weight_decay,
             "sequence_patience": args.sequence_patience,
+            "hybrid_static_hidden_dim": args.hybrid_static_hidden_dim,
+            "lstm_hidden_dim": args.lstm_hidden_dim,
+            "transformer_model_dim": args.transformer_model_dim,
+            "transformer_training_lookback_days": args.transformer_training_lookback_days,
             "use_llm_feature": args.use_llm_feature and config.llm.enabled,
             "latest_market_date": latest_date.date().isoformat(),
             "market_data_source": market_data.provenance.get("source"),
@@ -622,6 +810,9 @@ def main() -> None:
                 "tree_history": tree_history_path,
                 "mlp_history": mlp_history_path,
                 "tcn_history": tcn_history_path,
+                "hybrid_history": hybrid_history_path,
+                "lstm_history": lstm_history_path,
+                "transformer_history": transformer_history_path,
             },
         ),
     )

@@ -30,6 +30,7 @@ us-invest-ai-report = "us_invest_ai.performance_report:main"
 us-invest-ai-ml-report = "us_invest_ai.supervised_ml_report:main"
 us-invest-ai-dl-report = "us_invest_ai.deep_learning_report:main"
 us-invest-ai-stability-report = "us_invest_ai.stability_report:main"
+us-invest-ai-transformer-sweep = "us_invest_ai.transformer_sweep:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

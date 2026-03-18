@@ -24,13 +24,17 @@ This file tracks which external review findings were already addressed in the lo
 - Added a free-approx dynamic monthly snapshot builder with sidecar manifests and linked those manifests into run/report provenance.
 - Re-ran the stricter dynamic 60-name lane; the latest 1-year window still favors the rules baseline, but the tree model now leads the repeated-window average and beats the baseline in `3/4` windows.
 - Added the first temporal convolution baseline; it underperforms the rules baseline and tree model, but it establishes a real sequence-model control in the stricter lane.
+- Added a hybrid sequence-plus-static baseline; it improves materially on TCN and edges past MLP on repeated-window average, but it still trails tree, the rules baseline, and ridge.
+- Added an LSTM recurrent baseline; it underperforms hybrid and does not improve on the current sequence controls, which is useful negative evidence against recurrence-only changes.
+- Added a transformer-style baseline with a rolling training window; it is the first learned model in the repo to beat the rules baseline on the latest strict dynamic-lane 1-year report and in a focused repeated-window average comparison.
+- Added focused transformer sweep tooling and confirmed the current best combo is a smaller transformer with a 252-trading-day rolling training window.
 
 ## Still Valid Backlog
 
 - Move from free-approx dynamic snapshots toward better point-in-time constituent history.
 - Replace scalar `llm_score` with structured subfactors such as guidance, demand, legal risk, and liquidity pressure.
 - Improve execution realism beyond fixed bps costs with spread/slippage and liquidity-aware assumptions.
-- Add a stronger second sequence baseline on top of the dynamic-universe control lane, likely `LSTM` or a hybrid sequence-plus-static model.
+- Extend transformer robustness sweeps toward sequence-lookback length and objective design.
 
 ## Interpretation Rule
 

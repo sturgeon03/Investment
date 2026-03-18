@@ -20,9 +20,9 @@ Current assessment:
 
 The next phase should be:
 
-`a stronger second sequence baseline on top of the dynamic-universe control lane`
+`deeper transformer hardening on top of the dynamic-universe control lane`
 
-The repo now has a wider 60-name candidate pool, a generated free-approx monthly snapshot lane, repeated OOS windows, point-in-time eligibility filters, and a first TCN baseline. That TCN result is useful but weak. True constituent-history data is still backlog, but the immediate modeling next step is now `LSTM or hybrid sequence + static context`, not more tabular variants and not RL.
+The repo now has a wider 60-name candidate pool, a generated free-approx monthly snapshot lane, repeated OOS windows, point-in-time eligibility filters, TCN/hybrid/LSTM controls, a transformer-style follow-up, and a focused transformer sweep tool. The best current combo is a smaller transformer with a 252-trading-day rolling training window, which beats the rules baseline on the latest strict 1-year report and on focused repeated-window average. True constituent-history data is still backlog, but the immediate next step is now `deeper transformer hardening`, not more random model-family expansion and not RL.
 
 ## Ordered Next Steps
 
@@ -40,9 +40,11 @@ The repo now has a wider 60-name candidate pool, a generated free-approx monthly
    - keep retry/backoff in the fetch layer so long experiments fail less often
    - keep the feature lane benchmark-aware and universe-aware
 
-3. Add stronger sequence models now that the first TCN control exists.
-   - LSTM or hybrid sequence-plus-static context next
-   - transformer-based model only after at least one stronger sequence follow-up exists
+3. Harden the strongest sequence model now that TCN, hybrid, LSTM, and transformer controls exist.
+   - add focused comparison tooling so one new model can be evaluated without rerunning every weaker lane
+   - extend robustness checks beyond transformer training-window length and model size
+   - next sweep candidates should be sequence-lookback length and objective design
+   - only revisit RL after the price-model lane is clearly credible
 
 4. Reposition LLM signals as auxiliary features.
    - use them as an input to the price model
@@ -67,7 +69,7 @@ When choosing between two possible next tasks:
 The project will be moving in the right direction if the next implemented milestone produces:
 
 - a stronger sequence-model comparison on the same dynamic-universe lane
-- repeated window comparisons vs rules, ridge, tree, MLP, TCN, and the next sequence follow-up
+- repeated window comparisons that confirm whether transformer remains ahead under deeper robustness sweeps
 - a clearer answer on whether the remaining gap is architecture choice, feature design, or still data realism
 - continued reproducibility via manifests that include the dynamic snapshot builder sidecar
 - learned-model results that remain credible under the stricter dynamic-universe and eligibility constraints

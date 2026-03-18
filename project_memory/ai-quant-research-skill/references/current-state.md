@@ -199,6 +199,69 @@ Interpretation:
 - this is still a meaningful milestone because the repo now has a real sequence-model control under the stricter dynamic-universe lane
 - the next model step should be a stronger sequence baseline, likely `LSTM` or a hybrid sequence-plus-static model
 
+Second sequence baseline on the dynamic 60-name lane:
+
+- latest 1-year OOS ending capital:
+  hybrid sequence about `$115,056`
+- repeated 4-window average ending capital:
+  hybrid sequence about `$113,074`
+
+Interpretation:
+
+- the hybrid sequence-plus-static model improves materially on the pure TCN baseline
+- in the latest 1-year window it beats TCN, MLP, and tree, but still trails ridge and the rules baseline
+- across repeated windows it beats MLP and TCN on average, but still trails tree, the rules baseline, and ridge
+- this makes the remaining sequence gap look more like a recurrent-architecture or objective-design issue than a simple need for more static context
+
+Recurrent sequence follow-up on the dynamic 60-name lane:
+
+- latest 1-year OOS ending capital:
+  LSTM about `$107,684`
+- repeated 4-window average ending capital:
+  LSTM about `$110,121`
+
+Interpretation:
+
+- the first recurrent baseline underperforms the rules baseline and also trails tree, hybrid, MLP, and TCN on repeated-window average
+- this is useful negative evidence because it suggests recurrence alone does not close the gap
+- the next sequence step should now be transformer-style sequence modeling or a sequence-objective redesign rather than another small recurrent variant
+
+Transformer-style sequence follow-up on the dynamic 60-name lane:
+
+- latest 1-year OOS ending capital:
+  transformer about `$123,134`
+- focused repeated 4-window average ending capital versus the same rules baseline windows:
+  transformer about `$120,520`
+  baseline about `$115,607`
+
+Interpretation:
+
+- this is the first learned model in the repo to beat the rules baseline on the latest strict dynamic-lane 1-year report
+- in the focused repeated-window comparison it also beats the rules baseline on average and in `2/4` windows
+- its repeated-window average also exceeds the previously leading tree model's `~$119,183` on the same lane
+- this is the strongest positive AI-alpha evidence in the repo so far, but it still relies on free-approx universe history and backtest assumptions
+
+Focused transformer robustness sweep on the dynamic 60-name lane:
+
+- sweep grid:
+  `model_dim in {4, 8}`
+  `training_lookback_days in {126, 252}`
+- best combo:
+  `transformer_d4_lb252`
+- latest 1-year OOS ending capital for `transformer_d4_lb252`:
+  about `$125,527`
+- repeated 4-window average ending capital for `transformer_d4_lb252`:
+  about `$120,520`
+  baseline over the same windows:
+  about `$115,607`
+
+Interpretation:
+
+- a smaller transformer with a longer rolling training window is currently the strongest learned setup in the repo
+- shorter rolling training windows degrade results materially
+- larger model dimension does not help under the current data regime
+- this strengthens the view that current bottlenecks are objective design, calibration, and realism, not simply more width or recurrence
+
 ## Main Gaps
 
 The biggest remaining gaps are:
@@ -210,7 +273,7 @@ The biggest remaining gaps are:
 - no purged cross-validation or embargo-style validation
 - no true point-in-time constituent history yet
 - only an approximate phased universe, not an institutional point-in-time membership dataset
-- no stronger post-TCN sequence baseline yet
+- no deeper transformer robustness sweep yet beyond model-size and training-window choices
 
 ## Recent Hardening
 
@@ -228,7 +291,9 @@ The local workspace has now hardened several items that were previously weak or 
 - price and SEC fetch paths now retry transient failures instead of failing on the first temporary error
 - the repo now supports point-in-time eligibility filters that apply to both ranking and walk-forward training
 - the repo now supports generated monthly dynamic-universe snapshots with sidecar manifests, and those manifests are linked into run/report provenance
-- the repo now also has a first temporal convolution baseline integrated into the last-year and repeated-window report stack
+- the repo now also has temporal convolution, hybrid sequence-plus-static, and recurrent LSTM baselines integrated into the last-year and repeated-window report stack
+- the repo now also has a transformer-style baseline with a rolling training window that finishes on the strict dynamic-universe lane
+- the repo now also has a focused transformer sweep tool for baseline-vs-transformer robustness checks
 
 An external static review suggested that `llm_score` was being overwritten to zero in the main strategy path. That is not true in the current local workspace. Treat that review item as stale for this branch, but keep the new regression tests.
 
@@ -241,4 +306,4 @@ The repo is not yet going far enough in the direction the user actually wants:
 - the user wants AI quant investing
 - the current system is still stronger as infrastructure than as AI alpha
 
-The next stage should therefore focus on a stronger second sequence baseline on top of the dynamic-universe lane, while keeping true constituent-history data as backlog and avoiding more workflow polish.
+The next stage should therefore focus on deeper transformer hardening, especially sequence-lookback and objective-design robustness, while keeping true constituent-history data as backlog and avoiding premature RL work.

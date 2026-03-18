@@ -12,11 +12,17 @@ from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.dl_strategy import MLPModelConfig, generate_mlp_target_weights
 from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
 from us_invest_ai.features import build_features
+from us_invest_ai.hybrid_sequence_strategy import (
+    HybridSequenceModelConfig,
+    generate_hybrid_sequence_target_weights,
+)
+from us_invest_ai.lstm_strategy import LSTMModelConfig, generate_lstm_target_weights
 from us_invest_ai.ml_strategy import MLModelConfig, generate_ridge_walkforward_target_weights
 from us_invest_ai.performance_report import _build_svg
 from us_invest_ai.signals import load_llm_scores
 from us_invest_ai.strategy import generate_target_weights
 from us_invest_ai.tcn_strategy import TCNModelConfig, generate_tcn_target_weights
+from us_invest_ai.transformer_strategy import TransformerModelConfig, generate_transformer_target_weights
 from us_invest_ai.tree_strategy import TreeModelConfig, generate_tree_target_weights
 
 
@@ -196,6 +202,30 @@ def _parse_args() -> argparse.Namespace:
         type=int,
         default=15,
         help="Early-stopping patience for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--hybrid-static-hidden-dim",
+        type=int,
+        default=16,
+        help="Hidden dimension for the static branch inside the hybrid sequence baseline.",
+    )
+    parser.add_argument(
+        "--lstm-hidden-dim",
+        type=int,
+        default=12,
+        help="Hidden dimension for the LSTM baseline.",
+    )
+    parser.add_argument(
+        "--transformer-model-dim",
+        type=int,
+        default=4,
+        help="Model dimension for the transformer-style baseline.",
+    )
+    parser.add_argument(
+        "--transformer-training-lookback-days",
+        type=int,
+        default=252,
+        help="Rolling training-window length in trading days for the transformer-style baseline.",
     )
     parser.add_argument(
         "--initial-capital",
@@ -468,6 +498,88 @@ def main() -> None:
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
+    hybrid_weights, hybrid_history = generate_hybrid_sequence_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=HybridSequenceModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            kernel_size=args.sequence_kernel_size,
+            sequence_hidden_channels=args.sequence_hidden_channels,
+            static_hidden_dim=args.hybrid_static_hidden_dim,
+            learning_rate=args.sequence_learning_rate,
+            max_epochs=args.sequence_max_epochs,
+            batch_size=args.sequence_batch_size,
+            weight_decay=args.sequence_weight_decay,
+            patience=args.sequence_patience,
+        ),
+        eval_start=earliest_eval_start,
+        llm_scores=llm_scores,
+    )
+    hybrid_result = run_backtest(
+        prices=prices,
+        target_weights=hybrid_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
+    lstm_weights, lstm_history = generate_lstm_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=LSTMModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            hidden_dim=args.lstm_hidden_dim,
+            learning_rate=args.sequence_learning_rate,
+            max_epochs=args.sequence_max_epochs,
+            batch_size=args.sequence_batch_size,
+            weight_decay=args.sequence_weight_decay,
+            patience=args.sequence_patience,
+        ),
+        eval_start=earliest_eval_start,
+        llm_scores=llm_scores,
+    )
+    lstm_result = run_backtest(
+        prices=prices,
+        target_weights=lstm_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
+    transformer_weights, transformer_history = generate_transformer_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=TransformerModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            training_lookback_days=args.transformer_training_lookback_days,
+            model_dim=args.transformer_model_dim,
+        ),
+        eval_start=earliest_eval_start,
+        llm_scores=llm_scores,
+    )
+    transformer_result = run_backtest(
+        prices=prices,
+        target_weights=transformer_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
 
     model_runs = [
         ("configured_baseline", baseline_result, baseline_history),
@@ -475,6 +587,9 @@ def main() -> None:
         ("tree_walkforward", tree_result, tree_history),
         ("mlp_walkforward", mlp_result, mlp_history),
         ("tcn_walkforward", tcn_result, tcn_history),
+        ("hybrid_sequence_walkforward", hybrid_result, hybrid_history),
+        ("lstm_walkforward", lstm_result, lstm_history),
+        ("transformer_walkforward", transformer_result, transformer_history),
     ]
 
     window_rows: list[pd.DataFrame] = []
@@ -538,6 +653,9 @@ def main() -> None:
         "tree_walkforward",
         "mlp_walkforward",
         "tcn_walkforward",
+        "hybrid_sequence_walkforward",
+        "lstm_walkforward",
+        "transformer_walkforward",
     ]
     chart_frame = chart_frame.reindex(columns=ordered_chart_columns)
     chart_frame = chart_frame.rename(columns={column: f"{column}_value" for column in chart_frame.columns if column != "date"})
@@ -586,6 +704,10 @@ def main() -> None:
             "sequence_batch_size": args.sequence_batch_size,
             "sequence_weight_decay": args.sequence_weight_decay,
             "sequence_patience": args.sequence_patience,
+            "hybrid_static_hidden_dim": args.hybrid_static_hidden_dim,
+            "lstm_hidden_dim": args.lstm_hidden_dim,
+            "transformer_model_dim": args.transformer_model_dim,
+            "transformer_training_lookback_days": args.transformer_training_lookback_days,
             "use_llm_feature": args.use_llm_feature and config.llm.enabled,
             "window_labels": [str(window["window_label"]) for window in windows],
             "market_data_source": market_data.provenance.get("source"),

@@ -1,0 +1,5 @@
+model_name,avg_transformer_ending_capital,training_lookback_days,model_dim,beat_baseline_windows
+transformer_d4_lb252,120519.83186947381,252.0,4.0,2
+transformer_d4_lb126,118385.36867657694,126.0,4.0,1
+transformer_d8_lb252,118038.79426867203,252.0,8.0,1
+transformer_d8_lb126,115694.17114377364,126.0,8.0,1
