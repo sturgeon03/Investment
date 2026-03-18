@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-18
+Last updated: 2026-03-19
 
 ## Repository Status
 
@@ -244,22 +244,26 @@ Interpretation:
 Focused transformer robustness sweep on the dynamic 60-name lane:
 
 - sweep grid:
-  `model_dim in {4, 8}`
-  `training_lookback_days in {126, 252}`
-- best combo:
-  `transformer_d4_lb252`
-- latest 1-year OOS ending capital for `transformer_d4_lb252`:
-  about `$125,527`
-- repeated 4-window average ending capital for `transformer_d4_lb252`:
-  about `$120,520`
+  `model_dim = 4`
+  `training_lookback_days = 252`
+  `sequence_lookback_window in {10, 20, 40}`
+  `target_clip_quantile in {raw, 0.90, 0.95}`
+- best latest 1-year combo:
+  `transformer_d4_lb252_seq40_clip_q95`
+- best repeated 4-window average combo:
+  `transformer_d4_lb252_seq20_clip_q95`
+- latest 1-year OOS ending capital for `transformer_d4_lb252_seq40_clip_q95`:
+  about `$129,739`
+- repeated 4-window average ending capital for `transformer_d4_lb252_seq20_clip_q95`:
+  about `$121,320`
   baseline over the same windows:
   about `$115,607`
 
 Interpretation:
 
-- a smaller transformer with a longer rolling training window is currently the strongest learned setup in the repo
-- shorter rolling training windows degrade results materially
-- larger model dimension does not help under the current data regime
+- clipping the target objective improves both the latest-window result and the repeated-window average relative to the raw-return objective
+- `sequence_lookback_window = 10` is too short under the current data regime
+- `sequence_lookback_window = 40` is strongest on the latest 1-year slice, while `20` is stronger on repeated-window average
 - this strengthens the view that current bottlenecks are objective design, calibration, and realism, not simply more width or recurrence
 
 ## Main Gaps
@@ -273,7 +277,7 @@ The biggest remaining gaps are:
 - no purged cross-validation or embargo-style validation
 - no true point-in-time constituent history yet
 - only an approximate phased universe, not an institutional point-in-time membership dataset
-- no deeper transformer robustness sweep yet beyond model-size and training-window choices
+- no standard-report promotion yet for the clipped-objective transformer winner, and no final tie-break resolution yet between the `seq20` and `seq40` variants
 
 ## Recent Hardening
 
@@ -293,7 +297,9 @@ The local workspace has now hardened several items that were previously weak or 
 - the repo now supports generated monthly dynamic-universe snapshots with sidecar manifests, and those manifests are linked into run/report provenance
 - the repo now also has temporal convolution, hybrid sequence-plus-static, and recurrent LSTM baselines integrated into the last-year and repeated-window report stack
 - the repo now also has a transformer-style baseline with a rolling training window that finishes on the strict dynamic-universe lane
-- the repo now also has a focused transformer sweep tool for baseline-vs-transformer robustness checks
+- the repo now also has a focused transformer sweep tool for baseline-vs-transformer robustness checks across sequence lookback and target-clipping objective choices
+- the standard report stack now has wiring to accept clipped-objective transformer defaults, with the latest-year report ready for the stronger `seq40 + clip_q95` path and the repeated-window report ready for the safer `seq20 + clip_q95` path
+- `kr_stocks` is no longer just an empty placeholder; it now has a Korea-market scaffold for ticker conventions, DART-oriented documentation, trading-calendar assumptions, and fee/tax placeholders
 
 An external static review suggested that `llm_score` was being overwritten to zero in the main strategy path. That is not true in the current local workspace. Treat that review item as stale for this branch, but keep the new regression tests.
 
@@ -306,4 +312,4 @@ The repo is not yet going far enough in the direction the user actually wants:
 - the user wants AI quant investing
 - the current system is still stronger as infrastructure than as AI alpha
 
-The next stage should therefore focus on deeper transformer hardening, especially sequence-lookback and objective-design robustness, while keeping true constituent-history data as backlog and avoiding premature RL work.
+The next stage should therefore focus on rerunning the standard report stack on top of the new clipped-objective transformer defaults, then begin the first shared-core split so `kr_stocks` can reuse the real research core instead of diverging early, while keeping true constituent-history data as backlog and avoiding premature RL work.

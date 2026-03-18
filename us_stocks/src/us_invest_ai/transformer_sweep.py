@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -23,6 +22,28 @@ def parse_int_grid(value: str) -> list[int]:
     if not parsed:
         raise argparse.ArgumentTypeError("At least one integer value is required.")
     return parsed
+
+
+def parse_optional_float_grid(value: str) -> list[float | None]:
+    parsed: list[float | None] = []
+    for item in value.split(","):
+        token = item.strip().lower()
+        if not token:
+            continue
+        if token in {"none", "null", "raw"}:
+            parsed.append(None)
+            continue
+        parsed.append(float(token))
+    if not parsed:
+        raise argparse.ArgumentTypeError("At least one float or 'none' value is required.")
+    return parsed
+
+
+def format_objective_name(target_clip_quantile: float | None) -> str:
+    if target_clip_quantile is None:
+        return "raw"
+    percentage = f"{target_clip_quantile * 100:.1f}".rstrip("0").rstrip(".")
+    return f"clip_q{percentage.replace('.', 'p')}"
 
 
 def _build_value_curve(
@@ -88,8 +109,20 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--sequence-lookback-window",
         type=int,
-        default=20,
-        help="Sequence lookback window.",
+        default=None,
+        help="Single sequence lookback override.",
+    )
+    parser.add_argument(
+        "--sequence-lookback-windows",
+        type=parse_int_grid,
+        default=[20],
+        help="Comma-separated sequence lookback windows.",
+    )
+    parser.add_argument(
+        "--target-clip-quantiles",
+        type=parse_optional_float_grid,
+        default=[None],
+        help="Comma-separated central target clip quantiles, or 'none' for raw targets.",
     )
     parser.add_argument(
         "--label-horizon-days",
@@ -242,6 +275,11 @@ def _window_rows(
 def main() -> None:
     args = _parse_args()
     config = load_config(args.config)
+    sequence_lookback_windows = (
+        [args.sequence_lookback_window]
+        if args.sequence_lookback_window is not None
+        else args.sequence_lookback_windows
+    )
 
     market_data = prepare_market_data_bundle(
         data_dir=config.output.data_dir,
@@ -306,41 +344,51 @@ def main() -> None:
 
     for model_dim in args.transformer_model_dims:
         for training_lookback_days in args.transformer_training_lookback_days:
-            model_label = f"transformer_d{model_dim}_lb{training_lookback_days}"
-            model_config = TransformerModelConfig(
-                label_horizon_days=args.label_horizon_days,
-                validation_window_days=args.validation_window_days,
-                embargo_days=args.embargo_days,
-                min_training_samples=args.min_training_samples,
-                min_validation_samples=args.min_validation_samples,
-                lookback_window=args.sequence_lookback_window,
-                training_lookback_days=training_lookback_days,
-                model_dim=model_dim,
-            )
-            weights, history = generate_transformer_target_weights(
-                features=features,
-                strategy_config=config.strategy,
-                model_config=model_config,
-                eval_start=earliest_eval_start,
-            )
-            result = run_backtest(
-                prices=prices,
-                target_weights=weights,
-                transaction_cost_bps=config.backtest.transaction_cost_bps,
-                benchmark_prices=benchmark_prices,
-                risk_config=config.risk,
-            )
+            for sequence_lookback_window in sequence_lookback_windows:
+                for target_clip_quantile in args.target_clip_quantiles:
+                    objective_name = format_objective_name(target_clip_quantile)
+                    model_label = (
+                        f"transformer_d{model_dim}_lb{training_lookback_days}"
+                        f"_seq{sequence_lookback_window}_{objective_name}"
+                    )
+                    model_config = TransformerModelConfig(
+                        label_horizon_days=args.label_horizon_days,
+                        validation_window_days=args.validation_window_days,
+                        embargo_days=args.embargo_days,
+                        min_training_samples=args.min_training_samples,
+                        min_validation_samples=args.min_validation_samples,
+                        lookback_window=sequence_lookback_window,
+                        training_lookback_days=training_lookback_days,
+                        target_clip_quantile=target_clip_quantile,
+                        model_dim=model_dim,
+                    )
+                    weights, history = generate_transformer_target_weights(
+                        features=features,
+                        strategy_config=config.strategy,
+                        model_config=model_config,
+                        eval_start=earliest_eval_start,
+                    )
+                    result = run_backtest(
+                        prices=prices,
+                        target_weights=weights,
+                        transaction_cost_bps=config.backtest.transaction_cost_bps,
+                        benchmark_prices=benchmark_prices,
+                        risk_config=config.risk,
+                    )
 
-            extra = {
-                "model_dim": model_dim,
-                "training_lookback_days": training_lookback_days,
-            }
-            last_year_rows.append(
-                _last_year_row(model_label, result, history, latest_eval_start, args.initial_capital, extra=extra)
-            )
-            window_rows.extend(
-                _window_rows(model_label, result, history, windows, args.initial_capital, extra=extra)
-            )
+                    extra = {
+                        "model_dim": model_dim,
+                        "training_lookback_days": training_lookback_days,
+                        "sequence_lookback_window": sequence_lookback_window,
+                        "target_clip_quantile": target_clip_quantile,
+                        "objective_name": objective_name,
+                    }
+                    last_year_rows.append(
+                        _last_year_row(model_label, result, history, latest_eval_start, args.initial_capital, extra=extra)
+                    )
+                    window_rows.extend(
+                        _window_rows(model_label, result, history, windows, args.initial_capital, extra=extra)
+                    )
 
     last_year_summary = pd.concat(last_year_rows, ignore_index=True)
     baseline_ending_capital = float(
@@ -378,6 +426,9 @@ def main() -> None:
             beat_baseline_windows=("beat_baseline", "sum"),
             model_dim=("model_dim", "first"),
             training_lookback_days=("training_lookback_days", "first"),
+            sequence_lookback_window=("sequence_lookback_window", "first"),
+            target_clip_quantile=("target_clip_quantile", "first"),
+            objective_name=("objective_name", "first"),
         )
         .sort_values(["avg_ending_capital", "avg_sharpe"], ascending=[False, False])
         .reset_index(drop=True)
@@ -388,6 +439,9 @@ def main() -> None:
         "avg_ending_capital",
         "training_lookback_days",
         "model_dim",
+        "sequence_lookback_window",
+        "target_clip_quantile",
+        "objective_name",
         "beat_baseline_windows",
     ]].copy()
     focused_chart = focused_chart.rename(columns={"avg_ending_capital": "avg_transformer_ending_capital"})
@@ -431,9 +485,10 @@ def main() -> None:
             "embargo_days": args.embargo_days,
             "min_training_samples": args.min_training_samples,
             "min_validation_samples": args.min_validation_samples,
-            "sequence_lookback_window": args.sequence_lookback_window,
+            "sequence_lookback_windows": sequence_lookback_windows,
             "transformer_model_dims": args.transformer_model_dims,
             "transformer_training_lookback_days": args.transformer_training_lookback_days,
+            "target_clip_quantiles": args.target_clip_quantiles,
             "best_transformer_name": best_transformer_name,
             "latest_market_date": latest_date.date().isoformat(),
             "market_data_source": market_data.provenance.get("source"),

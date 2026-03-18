@@ -1,0 +1,27 @@
+# Korea ticker convention scaffold.
+
+formats:
+  listing_code_digits: 6
+  exchange_suffix_examples:
+    - "005930.KS"
+    - "035420.KQ"
+    - "114800.KS"
+
+venues:
+  - KOSPI
+  - KOSDAQ
+  - KONEX
+  - ETF
+  - REIT
+
+security_labels:
+  common_stock: "Common equity"
+  preferred_stock: "Preferred equity"
+  etf: "Exchange-traded fund"
+  reit: "Real estate investment trust"
+  preferred_etf: "Preferred-type ETF/ETN placeholder"
+
+mapping_notes:
+  - "Use a canonical six-digit code internally."
+  - "Keep exchange suffix only as a presentation or vendor-layer concern."
+  - "Do not assume US-style ticker strings are valid in Korea."

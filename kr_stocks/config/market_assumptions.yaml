@@ -1,0 +1,37 @@
+# Korea market assumptions scaffold.
+# Fill these values from the actual data vendor and execution venue before implementation.
+
+market:
+  name: KRX
+  country: KR
+  base_currency: KRW
+  timezone: Asia/Seoul
+
+sessions:
+  regular_open: "09:00"
+  regular_close: "15:30"
+  call_auction_open: "08:30"
+  call_auction_close: "09:00"
+  closing_auction_open: "15:20"
+  closing_auction_close: "15:30"
+
+eligibility:
+  min_close_price: 1000
+  min_average_daily_value_20_krw: 100000000
+  min_listing_age_days: 252
+
+universe:
+  primary_exchanges:
+    - KOSPI
+    - KOSDAQ
+    - KONEX
+  security_types:
+    - common_stock
+    - preferred_stock
+    - etf
+    - reit
+    - preferred_etf
+
+notes:
+  - "Treat this as a placeholder until the KR data vendor is chosen."
+  - "Adjust for split/rights-issue history once point-in-time vendor data exists."

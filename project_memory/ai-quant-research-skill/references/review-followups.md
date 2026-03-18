@@ -1,6 +1,6 @@
 # Review Follow-Ups
 
-Last updated: 2026-03-18
+Last updated: 2026-03-19
 
 This file tracks which external review findings were already addressed in the local workspace and which ones remain valid backlog.
 
@@ -28,13 +28,17 @@ This file tracks which external review findings were already addressed in the lo
 - Added an LSTM recurrent baseline; it underperforms hybrid and does not improve on the current sequence controls, which is useful negative evidence against recurrence-only changes.
 - Added a transformer-style baseline with a rolling training window; it is the first learned model in the repo to beat the rules baseline on the latest strict dynamic-lane 1-year report and in a focused repeated-window average comparison.
 - Added focused transformer sweep tooling and confirmed the current best combo is a smaller transformer with a 252-trading-day rolling training window.
+- Extended the focused transformer sweep to cover sequence-lookback length and target-clipping objective design, and confirmed that clipped targets beat the raw objective while `seq40` wins the latest-year slice and `seq20` wins repeated-window average.
+- Added report-stack plumbing so the standard last-year report can take the stronger `seq40 + clip_q95` default and the repeated-window report can take the safer `seq20 + clip_q95` default.
+- Added the first `kr_stocks` market-adapter scaffold instead of leaving Korea as a placeholder only.
 
 ## Still Valid Backlog
 
 - Move from free-approx dynamic snapshots toward better point-in-time constituent history.
 - Replace scalar `llm_score` with structured subfactors such as guidance, demand, legal risk, and liquidity pressure.
 - Improve execution realism beyond fixed bps costs with spread/slippage and liquidity-aware assumptions.
-- Extend transformer robustness sweeps toward sequence-lookback length and objective design.
+- Promote the clipped-objective transformer winner into the standard report stack and resolve the `seq20` versus `seq40` tie-break.
+- Rerun the standard reports on top of the new transformer defaults and start the first shared-core split between market-agnostic research code and US-specific adapters.
 
 ## Interpretation Rule
 

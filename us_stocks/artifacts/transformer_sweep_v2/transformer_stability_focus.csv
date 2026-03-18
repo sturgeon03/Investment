@@ -1,0 +1,10 @@
+model_name,avg_transformer_ending_capital,training_lookback_days,model_dim,sequence_lookback_window,target_clip_quantile,objective_name,beat_baseline_windows
+transformer_d4_lb252_seq20_clip_q95,121320.39813243895,252.0,4.0,20.0,0.95,clip_q95,2
+transformer_d4_lb252_seq20_raw,120519.83186947381,252.0,4.0,20.0,,raw,2
+transformer_d4_lb252_seq40_clip_q90,120121.78896516969,252.0,4.0,40.0,0.9,clip_q90,2
+transformer_d4_lb252_seq40_clip_q95,120102.61110548196,252.0,4.0,40.0,0.95,clip_q95,2
+transformer_d4_lb252_seq20_clip_q90,119024.12735935824,252.0,4.0,20.0,0.9,clip_q90,2
+transformer_d4_lb252_seq40_raw,118779.0095229836,252.0,4.0,40.0,,raw,2
+transformer_d4_lb252_seq10_raw,111945.65993275656,252.0,4.0,10.0,,raw,1
+transformer_d4_lb252_seq10_clip_q90,111849.33159467016,252.0,4.0,10.0,0.9,clip_q90,1
+transformer_d4_lb252_seq10_clip_q95,110833.53267856852,252.0,4.0,10.0,0.95,clip_q95,1

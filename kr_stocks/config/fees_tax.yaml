@@ -1,0 +1,27 @@
+# Korea market fee and tax scaffold.
+# Values here are placeholders only. Replace with broker-specific and tax-specific assumptions.
+
+commission:
+  broker_name: "placeholder"
+  per_side_bps: 0.0
+  min_fee_krw: 0
+  max_fee_krw: null
+
+tax:
+  securities_transaction_tax_bps:
+    kospi_common: 0.0
+    kosdaq_common: 0.0
+    etf: 0.0
+  local_surtax_bps: 0.0
+
+slippage:
+  model: fixed_bps
+  fixed_bps: 0.0
+
+funding:
+  currency: KRW
+  cash_drag_bps_per_year: 0.0
+
+notes:
+  - "Replace with actual broker commission schedule."
+  - "Tax treatment differs by security type and regulation changes over time."

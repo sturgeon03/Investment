@@ -22,13 +22,14 @@ from us_invest_ai.performance_report import _build_svg
 from us_invest_ai.signals import load_llm_scores
 from us_invest_ai.strategy import generate_target_weights
 from us_invest_ai.tcn_strategy import TCNModelConfig, generate_tcn_target_weights
-from us_invest_ai.transformer_strategy import TransformerModelConfig, generate_transformer_target_weights
+from us_invest_ai.transformer_report_support import build_transformer_report_config
+from us_invest_ai.transformer_strategy import generate_transformer_target_weights
 from us_invest_ai.tree_strategy import TreeModelConfig, generate_tree_target_weights
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare model stability across repeated out-of-sample windows."
+        description="Compare model stability across repeated out-of-sample windows, including the clipped-objective transformer."
     )
     parser.add_argument(
         "--config",
@@ -219,13 +220,25 @@ def _parse_args() -> argparse.Namespace:
         "--transformer-model-dim",
         type=int,
         default=4,
-        help="Model dimension for the transformer-style baseline.",
+        help="Model dimension for the clipped-objective transformer baseline.",
     )
     parser.add_argument(
         "--transformer-training-lookback-days",
         type=int,
         default=252,
-        help="Rolling training-window length in trading days for the transformer-style baseline.",
+        help="Rolling training-window length in trading days for the clipped-objective transformer baseline.",
+    )
+    parser.add_argument(
+        "--transformer-sequence-lookback-window",
+        type=int,
+        default=20,
+        help="Sequence lookback window for the clipped-objective transformer baseline.",
+    )
+    parser.add_argument(
+        "--transformer-target-clip-quantile",
+        type=float,
+        default=0.95,
+        help="Central target clip quantile for the clipped-objective transformer baseline.",
     )
     parser.add_argument(
         "--initial-capital",
@@ -559,16 +572,17 @@ def main() -> None:
     transformer_weights, transformer_history = generate_transformer_target_weights(
         features=features,
         strategy_config=config.strategy,
-        model_config=TransformerModelConfig(
+        model_config=build_transformer_report_config(
             label_horizon_days=args.label_horizon_days,
             validation_window_days=args.validation_window_days,
             embargo_days=args.embargo_days,
             min_training_samples=args.min_training_samples,
             min_validation_samples=args.min_validation_samples,
             use_llm_feature=args.use_llm_feature and config.llm.enabled,
-            lookback_window=args.sequence_lookback_window,
+            sequence_lookback_window=args.transformer_sequence_lookback_window,
             training_lookback_days=args.transformer_training_lookback_days,
             model_dim=args.transformer_model_dim,
+            target_clip_quantile=args.transformer_target_clip_quantile,
         ),
         eval_start=earliest_eval_start,
         llm_scores=llm_scores,
@@ -708,6 +722,8 @@ def main() -> None:
             "lstm_hidden_dim": args.lstm_hidden_dim,
             "transformer_model_dim": args.transformer_model_dim,
             "transformer_training_lookback_days": args.transformer_training_lookback_days,
+            "transformer_sequence_lookback_window": args.transformer_sequence_lookback_window,
+            "transformer_target_clip_quantile": args.transformer_target_clip_quantile,
             "use_llm_feature": args.use_llm_feature and config.llm.enabled,
             "window_labels": [str(window["window_label"]) for window in windows],
             "market_data_source": market_data.provenance.get("source"),

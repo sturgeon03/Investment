@@ -26,6 +26,7 @@ class TransformerModelConfig:
     use_llm_feature: bool = False
     lookback_window: int = 20
     training_lookback_days: int | None = 252
+    target_clip_quantile: float | None = None
     model_dim: int = 4
     learning_rate: float = 0.005
     max_epochs: int = 12
@@ -53,6 +54,9 @@ class TransformerModel:
     lookback_window: int
     model_dim: int
     validation_mse: float
+    target_clip_quantile: float | None
+    target_clip_lower: float | None
+    target_clip_upper: float | None
 
 
 def _softmax(x: np.ndarray) -> np.ndarray:
@@ -67,6 +71,24 @@ def _standardize_sequences(sequences: np.ndarray) -> tuple[np.ndarray, np.ndarra
     stds[stds == 0] = 1.0
     scaled = (sequences - means) / stds
     return scaled.astype(np.float32), means, stds
+
+
+def _clip_targets(
+    train_targets: np.ndarray,
+    validation_targets: np.ndarray,
+    target_clip_quantile: float | None,
+) -> tuple[np.ndarray, np.ndarray, float | None, float | None]:
+    if target_clip_quantile is None:
+        return train_targets.astype(np.float32), validation_targets.astype(np.float32), None, None
+    if not 0.5 < target_clip_quantile < 1.0:
+        raise ValueError("target_clip_quantile must be between 0.5 and 1.0.")
+
+    tail_quantile = (1.0 - target_clip_quantile) / 2.0
+    lower = float(np.quantile(train_targets, tail_quantile))
+    upper = float(np.quantile(train_targets, 1.0 - tail_quantile))
+    clipped_train = np.clip(train_targets, lower, upper).astype(np.float32)
+    clipped_validation = np.clip(validation_targets, lower, upper).astype(np.float32)
+    return clipped_train, clipped_validation, lower, upper
 
 
 def _forward(
@@ -106,15 +128,21 @@ def fit_transformer_model(
     x_train, feature_means, feature_stds = _standardize_sequences(train_sequences.astype(np.float32))
     x_validation = ((validation_sequences.astype(np.float32) - feature_means) / feature_stds).astype(np.float32)
 
-    y_train = train_targets.astype(np.float32)
-    y_validation = validation_targets.astype(np.float32)
-    target_mean = float(y_train.mean())
-    target_std = float(y_train.std(ddof=0))
+    y_train_raw = train_targets.astype(np.float32)
+    y_validation_raw = validation_targets.astype(np.float32)
+    y_train_objective, y_validation_objective, target_clip_lower, target_clip_upper = _clip_targets(
+        y_train_raw,
+        y_validation_raw,
+        config.target_clip_quantile,
+    )
+
+    target_mean = float(y_train_objective.mean())
+    target_std = float(y_train_objective.std(ddof=0))
     if target_std == 0:
         target_std = 1.0
 
-    y_train_scaled = ((y_train - target_mean) / target_std).reshape(-1, 1).astype(np.float32)
-    y_validation_scaled = ((y_validation - target_mean) / target_std).reshape(-1, 1).astype(np.float32)
+    y_train_scaled = ((y_train_objective - target_mean) / target_std).reshape(-1, 1).astype(np.float32)
+    y_validation_scaled = ((y_validation_objective - target_mean) / target_std).reshape(-1, 1).astype(np.float32)
 
     rng = np.random.default_rng(config.random_seed)
     input_dim = x_train.shape[2]
@@ -284,7 +312,13 @@ def fit_transformer_model(
         )
         validation_loss = float(np.mean((validation_predictions - y_validation_scaled) ** 2))
         validation_predictions_actual = validation_predictions.ravel() * target_std + target_mean
-        validation_mse = float(np.mean((validation_predictions_actual - y_validation) ** 2))
+        if target_clip_lower is not None and target_clip_upper is not None:
+            validation_predictions_actual = np.clip(
+                validation_predictions_actual,
+                target_clip_lower,
+                target_clip_upper,
+            )
+        validation_mse = float(np.mean((validation_predictions_actual - y_validation_raw) ** 2))
         if validation_loss + 1e-9 < best_validation_loss:
             best_validation_loss = validation_loss
             best_validation_mse = validation_mse
@@ -333,6 +367,9 @@ def fit_transformer_model(
         lookback_window=config.lookback_window,
         model_dim=config.model_dim,
         validation_mse=best_validation_mse,
+        target_clip_quantile=config.target_clip_quantile,
+        target_clip_lower=target_clip_lower,
+        target_clip_upper=target_clip_upper,
     )
 
 
@@ -349,7 +386,14 @@ def predict_transformer_model(model: TransformerModel, sequences: np.ndarray) ->
         model.output_weights,
         model.output_bias,
     )
-    return predictions.ravel() * model.target_std + model.target_mean
+    predictions_actual = predictions.ravel() * model.target_std + model.target_mean
+    if model.target_clip_lower is not None and model.target_clip_upper is not None:
+        predictions_actual = np.clip(
+            predictions_actual,
+            model.target_clip_lower,
+            model.target_clip_upper,
+        )
+    return predictions_actual
 
 
 def generate_transformer_target_weights(

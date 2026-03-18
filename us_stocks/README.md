@@ -102,7 +102,7 @@ python -m us_invest_ai.stability_report --config .\us_stocks\config\soft_price_l
 Run the focused transformer robustness sweep:
 
 ```powershell
-python -m us_invest_ai.transformer_sweep --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --transformer-model-dims 4,8 --transformer-training-lookback-days 126,252 --output-dir .\us_stocks\artifacts\transformer_sweep_v1
+python -m us_invest_ai.transformer_sweep --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --transformer-model-dims 4 --transformer-training-lookback-days 252 --sequence-lookback-windows 10,20,40 --target-clip-quantiles none,0.9,0.95 --output-dir .\us_stocks\artifacts\transformer_sweep_v2
 ```
 
 Generate a portfolio snapshot and order preview from an optional positions file:
@@ -342,20 +342,25 @@ Interpretation:
 - its repeated-window average also exceeds the previously leading tree model's `~$119,183` on the same lane
 - the next stage should now focus on hardening the transformer lane and adding lighter-weight focused comparison tooling, not jumping to RL
 
-The first focused transformer sweep is now also in place:
+The focused transformer hardening sweep is now also in place:
 
-- sweep artifact root: `artifacts/transformer_sweep_v1`
-- tested grid: `model_dim in {4, 8}`, `training_lookback_days in {126, 252}`
-- best latest 1-year and repeated-window combo: `transformer_d4_lb252`
-- `transformer_d4_lb252`, latest 1-year OOS ending capital: `$125,527` vs baseline `$118,294`
-- `transformer_d4_lb252`, repeated 4-window average ending capital: `$120,520` vs baseline `$115,607`
+- sweep artifact root: `artifacts/transformer_sweep_v2`
+- tested grid:
+  `model_dim = 4`
+  `training_lookback_days = 252`
+  `sequence_lookback_window in {10, 20, 40}`
+  `target_clip_quantile in {raw, 0.90, 0.95}`
+- best latest 1-year combo: `transformer_d4_lb252_seq40_clip_q95`
+- best repeated-window average combo: `transformer_d4_lb252_seq20_clip_q95`
+- `transformer_d4_lb252_seq40_clip_q95`, latest 1-year OOS ending capital: `$129,739` vs baseline `$118,294`
+- `transformer_d4_lb252_seq20_clip_q95`, repeated 4-window average ending capital: `$121,320` vs baseline `$115,607`
 
 Interpretation:
 
-- a smaller transformer with a longer rolling training window is currently the strongest learned model in the repo
-- shorter rolling windows degrade performance materially
-- larger model size does not help under the current data regime
-- the next gain is more likely to come from objective design, sequence-lookback tuning, and execution realism than from simply making the model wider
+- clipping the target objective improves both the latest-window result and repeated-window average versus the raw-return objective
+- `sequence_lookback_window = 10` is too short under the current data regime
+- `sequence_lookback_window = 40` is strongest on the latest 1-year slice, while `20` is stronger on repeated-window average
+- the next gain is more likely to come from resolving the `seq20` versus `seq40` trade-off and promoting the clipped-objective transformer into the standard report stack than from simply making the model wider
 
 The lane-to-lane comparison artifacts are:
 
@@ -406,6 +411,6 @@ The recommended order remains:
 
 1. Keep the dynamic 60-name lane and repeated-window stability report as the default reality check.
 2. Keep true point-in-time constituent data as backlog, but treat the current dynamic lane as the standing control until then.
-3. Continue hardening the transformer lane next with deeper robustness checks, now that focused sweep tooling exists and `transformer_d4_lb252` is the current best learned setup.
+3. Continue hardening the transformer lane next by promoting the clipped-objective setup into the standard report stack and resolving the `seq20` versus `seq40` trade-off.
 4. Treat LLM signals as auxiliary inputs, not as the center of the research program.
 5. Leave reinforcement learning until the price-model lane is clearly credible.

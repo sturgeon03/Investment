@@ -1,0 +1,21 @@
+# Korea trading calendar scaffold.
+# This should eventually be backed by a proper KRX holiday calendar source.
+
+calendar:
+  timezone: Asia/Seoul
+  regular_trading_days: Monday-Friday
+  holiday_source: "KRX placeholder"
+
+session_rules:
+  use_end_of_day_rebalance: true
+  allow_half_day_sessions: false
+  allow_auction_rebalance: true
+
+holiday_assumptions:
+  include_national_holidays: true
+  include_market_closures: true
+  include_ad_hoc_closures: true
+
+notes:
+  - "Use a real exchange calendar before any backtest or live execution."
+  - "If a vendor calendar exists, it should override this scaffold."
