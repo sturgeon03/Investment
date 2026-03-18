@@ -1,0 +1,57 @@
+{
+  "builder": "free_approx_dynamic_universe_snapshots_v1",
+  "generated_at_utc": "2026-03-18T02:54:04.046815+00:00",
+  "inputs": {
+    "candidate_tickers_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60.txt",
+    "candidate_tickers_file_sha256": "e45b98c179e338b9c8f9b2e7798f75a021aff1b7d9a3442547c83e37bb7bb898",
+    "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
+    "market_data_manifest_sha256": "0991ac96149ecbca07b2d22185c513e8daf0a52f653ffb5dd3f19b16c6049304",
+    "metadata_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60_metadata.csv",
+    "metadata_file_sha256": "13919401f73b70a6ac7441aa26002a5e4fe1214cd218e4960509ade85d788e61"
+  },
+  "market_data": {
+    "benchmark_summary": {
+      "end_date": "2026-03-17",
+      "rows": 2062,
+      "start_date": "2018-01-02",
+      "ticker_count": 1
+    },
+    "prices_summary": {
+      "end_date": "2026-03-17",
+      "rows": 123720,
+      "start_date": "2018-01-02",
+      "ticker_count": 60
+    },
+    "source": "download"
+  },
+  "output_files": {
+    "market_data_manifest": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
+      "sha256": "0991ac96149ecbca07b2d22185c513e8daf0a52f653ffb5dd3f19b16c6049304"
+    },
+    "snapshot_csv": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\generated\\liquid_large_cap_60_dynamic_snapshots.csv",
+      "sha256": "b796c41a685fcd7a1b76f44422a8bc933345c39f215563c24f9eaf7306369d31"
+    }
+  },
+  "parameters": {
+    "min_close_price": 5.0,
+    "min_dollar_volume_60": 50000000.0,
+    "min_universe_age_days": 252,
+    "rebalance": "monthly",
+    "snapshot_size": 30
+  },
+  "query": {
+    "end": null,
+    "start": "2018-01-01"
+  },
+  "snapshot_summary": {
+    "first_effective_date": "2018-09-28",
+    "last_effective_date": "2026-03-17",
+    "rows": 2730,
+    "snapshot_count": 91,
+    "unique_tickers": 54
+  }
+}

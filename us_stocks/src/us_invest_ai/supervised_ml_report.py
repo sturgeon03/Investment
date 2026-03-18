@@ -8,7 +8,8 @@ import pandas as pd
 
 from us_invest_ai.backtest import build_summary, run_backtest
 from us_invest_ai.config import load_config
-from us_invest_ai.data import download_ohlcv
+from us_invest_ai.data import prepare_market_data_bundle
+from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
 from us_invest_ai.features import build_features
 from us_invest_ai.ml_strategy import MLModelConfig, generate_ml_target_weights
 from us_invest_ai.performance_report import _build_svg
@@ -96,17 +97,29 @@ def main() -> None:
     args = _parse_args()
     config = load_config(args.config)
 
-    prices = download_ohlcv(
+    market_data = prepare_market_data_bundle(
+        data_dir=config.output.data_dir,
         tickers=config.data.tickers,
+        benchmark=config.data.benchmark,
         start=config.data.start,
         end=config.data.end,
+        tickers_file=config.data.tickers_file,
+        metadata_file=config.data.metadata_file,
+        universe_snapshots_file=config.data.universe_snapshots_file,
     )
-    benchmark_prices = download_ohlcv(
-        tickers=[config.data.benchmark],
-        start=config.data.start,
-        end=config.data.end,
+    prices = market_data.prices
+    benchmark_prices = market_data.benchmark_prices
+    features = build_features(
+        prices,
+        benchmark_prices,
+        market_data.ticker_metadata,
+        market_data.universe_snapshots,
+        {
+            "min_close_price": config.eligibility.min_close_price,
+            "min_dollar_volume_20": config.eligibility.min_dollar_volume_20,
+            "min_universe_age_days": config.eligibility.min_universe_age_days,
+        },
     )
-    features = build_features(prices)
 
     latest_date = pd.to_datetime(prices["date"]).max().normalize()
     eval_start = latest_date - pd.Timedelta(days=args.lookback_days)
@@ -132,6 +145,7 @@ def main() -> None:
         target_weights=ml_weights,
         transaction_cost_bps=config.backtest.transaction_cost_bps,
         benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
     )
 
     baseline_weights, baseline_history = generate_target_weights(features, config.strategy, llm_scores)
@@ -140,6 +154,7 @@ def main() -> None:
         target_weights=baseline_weights,
         transaction_cost_bps=config.backtest.transaction_cost_bps,
         benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
     )
 
     ml_returns = ml_result.daily_returns.loc[ml_result.daily_returns.index >= eval_start]
@@ -207,6 +222,33 @@ def main() -> None:
 
     ml_history_path = output_dir / "supervised_ml_ranking_history_last_year.csv"
     ml_history.loc[ml_history["date"] >= eval_start_actual].to_csv(ml_history_path, index=False)
+    manifest = build_run_manifest(
+        config,
+        experiment_name="supervised_ml_report",
+        extra={
+            "lookback_days": args.lookback_days,
+            "label_horizon_days": args.label_horizon_days,
+            "ridge_alpha": args.ridge_alpha,
+            "min_training_samples": args.min_training_samples,
+            "use_llm_feature": args.use_llm_feature and config.llm.enabled,
+            "latest_market_date": latest_date.date().isoformat(),
+            "market_data_source": market_data.provenance.get("source"),
+            "market_data_manifest_path": market_data.provenance.get("manifest_path"),
+            "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
+        },
+    )
+    save_manifest(
+        output_dir / "report_manifest.json",
+        attach_output_files(
+            manifest,
+            {
+                "summary": summary_path,
+                "values": values_path,
+                "chart": chart_path,
+                "ranking_history": ml_history_path,
+            },
+        ),
+    )
 
     print(summary_frame.to_string(index=False))
     print(f"Latest market date: {latest_date.date().isoformat()}")

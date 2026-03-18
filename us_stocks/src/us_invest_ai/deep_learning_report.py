@@ -8,21 +8,24 @@ import pandas as pd
 
 from us_invest_ai.backtest import build_summary, run_backtest
 from us_invest_ai.config import load_config
-from us_invest_ai.data import download_ohlcv
+from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.dl_strategy import MLPModelConfig, generate_mlp_target_weights
+from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
 from us_invest_ai.ml_strategy import MLModelConfig, generate_ridge_walkforward_target_weights
 from us_invest_ai.performance_report import _build_svg
 from us_invest_ai.signals import load_llm_scores
 from us_invest_ai.strategy import generate_target_weights
+from us_invest_ai.tcn_strategy import TCNModelConfig, generate_tcn_target_weights
+from us_invest_ai.tree_strategy import TreeModelConfig, generate_tree_target_weights
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare rules, ridge walk-forward, and MLP walk-forward on the last year."
+        description="Compare rules, ridge, tree, MLP, and TCN walk-forward models on the last year."
     )
     parser.add_argument(
         "--config",
-        default="us_stocks/config/soft_price.yaml",
+        default="us_stocks/config/soft_price_large_cap_60_dynamic_eligibility.yaml",
         help="Base config for market data, costs, and portfolio construction.",
     )
     parser.add_argument(
@@ -68,6 +71,36 @@ def _parse_args() -> argparse.Namespace:
         help="Ridge regularization strength.",
     )
     parser.add_argument(
+        "--tree-learning-rate",
+        type=float,
+        default=0.05,
+        help="Learning rate for the gradient-boosted tree model.",
+    )
+    parser.add_argument(
+        "--tree-max-iter",
+        type=int,
+        default=200,
+        help="Maximum boosting iterations for the tree model.",
+    )
+    parser.add_argument(
+        "--tree-max-depth",
+        type=int,
+        default=3,
+        help="Maximum tree depth for each boosting stage.",
+    )
+    parser.add_argument(
+        "--tree-min-samples-leaf",
+        type=int,
+        default=20,
+        help="Minimum samples per leaf in the tree model.",
+    )
+    parser.add_argument(
+        "--tree-l2-regularization",
+        type=float,
+        default=0.0,
+        help="L2 regularization strength for the tree model.",
+    )
+    parser.add_argument(
         "--hidden-dim",
         type=int,
         default=32,
@@ -102,6 +135,54 @@ def _parse_args() -> argparse.Namespace:
         type=int,
         default=25,
         help="Early-stopping patience for the MLP.",
+    )
+    parser.add_argument(
+        "--sequence-lookback-window",
+        type=int,
+        default=20,
+        help="Lookback window length for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-kernel-size",
+        type=int,
+        default=5,
+        help="Kernel size for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-hidden-channels",
+        type=int,
+        default=8,
+        help="Hidden channel count for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-learning-rate",
+        type=float,
+        default=0.005,
+        help="Learning rate for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-max-epochs",
+        type=int,
+        default=120,
+        help="Maximum number of training epochs for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-batch-size",
+        type=int,
+        default=256,
+        help="Mini-batch size for the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-weight-decay",
+        type=float,
+        default=1e-4,
+        help="Weight decay used in the temporal convolution baseline.",
+    )
+    parser.add_argument(
+        "--sequence-patience",
+        type=int,
+        default=15,
+        help="Early-stopping patience for the temporal convolution baseline.",
     )
     parser.add_argument(
         "--initial-capital",
@@ -191,17 +272,43 @@ def _build_summary_row(
         if not selected.empty and "validation_sample_count" in selected.columns
         else np.nan
     )
+    row["avg_validation_mse"] = (
+        float(selected["validation_mse"].mean())
+        if not selected.empty and "validation_mse" in selected.columns
+        else np.nan
+    )
     return row
 
 
 def main() -> None:
     args = _parse_args()
     config = load_config(args.config)
-    prices, benchmark_prices = _load_market_data(config)
+    market_data = prepare_market_data_bundle(
+        data_dir=config.output.data_dir,
+        tickers=config.data.tickers,
+        benchmark=config.data.benchmark,
+        start=config.data.start,
+        end=config.data.end,
+        tickers_file=config.data.tickers_file,
+        metadata_file=config.data.metadata_file,
+        universe_snapshots_file=config.data.universe_snapshots_file,
+    )
+    prices = market_data.prices
+    benchmark_prices = market_data.benchmark_prices
 
     from us_invest_ai.features import build_features
 
-    features = build_features(prices)
+    features = build_features(
+        prices,
+        benchmark_prices,
+        market_data.ticker_metadata,
+        market_data.universe_snapshots,
+        {
+            "min_close_price": config.eligibility.min_close_price,
+            "min_dollar_volume_20": config.eligibility.min_dollar_volume_20,
+            "min_universe_age_days": config.eligibility.min_universe_age_days,
+        },
+    )
     latest_date = pd.to_datetime(prices["date"]).max().normalize()
     eval_start = latest_date - pd.Timedelta(days=args.lookback_days)
 
@@ -215,6 +322,7 @@ def main() -> None:
         target_weights=baseline_weights,
         transaction_cost_bps=config.backtest.transaction_cost_bps,
         benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
     )
 
     ridge_weights, ridge_history = generate_ridge_walkforward_target_weights(
@@ -237,6 +345,34 @@ def main() -> None:
         target_weights=ridge_weights,
         transaction_cost_bps=config.backtest.transaction_cost_bps,
         benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
+
+    tree_weights, tree_history = generate_tree_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=TreeModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            learning_rate=args.tree_learning_rate,
+            max_iter=args.tree_max_iter,
+            max_depth=args.tree_max_depth,
+            min_samples_leaf=args.tree_min_samples_leaf,
+            l2_regularization=args.tree_l2_regularization,
+        ),
+        eval_start=eval_start,
+        llm_scores=llm_scores,
+    )
+    tree_result = run_backtest(
+        prices=prices,
+        target_weights=tree_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
     )
 
     mlp_weights, mlp_history = generate_mlp_target_weights(
@@ -264,17 +400,49 @@ def main() -> None:
         target_weights=mlp_weights,
         transaction_cost_bps=config.backtest.transaction_cost_bps,
         benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
+    )
+    tcn_weights, tcn_history = generate_tcn_target_weights(
+        features=features,
+        strategy_config=config.strategy,
+        model_config=TCNModelConfig(
+            label_horizon_days=args.label_horizon_days,
+            validation_window_days=args.validation_window_days,
+            embargo_days=args.embargo_days,
+            min_training_samples=args.min_training_samples,
+            min_validation_samples=args.min_validation_samples,
+            use_llm_feature=args.use_llm_feature and config.llm.enabled,
+            lookback_window=args.sequence_lookback_window,
+            kernel_size=args.sequence_kernel_size,
+            hidden_channels=args.sequence_hidden_channels,
+            learning_rate=args.sequence_learning_rate,
+            max_epochs=args.sequence_max_epochs,
+            batch_size=args.sequence_batch_size,
+            weight_decay=args.sequence_weight_decay,
+            patience=args.sequence_patience,
+        ),
+        eval_start=eval_start,
+        llm_scores=llm_scores,
+    )
+    tcn_result = run_backtest(
+        prices=prices,
+        target_weights=tcn_weights,
+        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        benchmark_prices=benchmark_prices,
+        risk_config=config.risk,
     )
 
     baseline_returns = baseline_result.daily_returns.loc[baseline_result.daily_returns.index >= eval_start]
     ridge_returns = ridge_result.daily_returns.loc[ridge_result.daily_returns.index >= eval_start]
+    tree_returns = tree_result.daily_returns.loc[tree_result.daily_returns.index >= eval_start]
     mlp_returns = mlp_result.daily_returns.loc[mlp_result.daily_returns.index >= eval_start]
-    eval_start_actual = pd.to_datetime(mlp_returns.index.min()).normalize()
-    eval_end_actual = pd.to_datetime(mlp_returns.index.max()).normalize()
+    tcn_returns = tcn_result.daily_returns.loc[tcn_result.daily_returns.index >= eval_start]
+    eval_start_actual = pd.to_datetime(tcn_returns.index.min()).normalize()
+    eval_end_actual = pd.to_datetime(tcn_returns.index.max()).normalize()
 
     benchmark_returns = None
     if baseline_result.benchmark_returns is not None:
-        benchmark_returns = baseline_result.benchmark_returns.reindex(mlp_returns.index)
+        benchmark_returns = baseline_result.benchmark_returns.reindex(tcn_returns.index)
 
     baseline_summary = build_summary(
         baseline_returns,
@@ -288,15 +456,27 @@ def main() -> None:
         ridge_result.turnover.reindex(ridge_returns.index),
         ridge_result.benchmark_returns.reindex(ridge_returns.index) if ridge_result.benchmark_returns is not None else None,
     )
+    tree_summary = build_summary(
+        tree_returns,
+        tree_result.turnover.reindex(tree_returns.index),
+        tree_result.benchmark_returns.reindex(tree_returns.index) if tree_result.benchmark_returns is not None else None,
+    )
     mlp_summary = build_summary(
         mlp_returns,
         mlp_result.turnover.reindex(mlp_returns.index),
         mlp_result.benchmark_returns.reindex(mlp_returns.index) if mlp_result.benchmark_returns is not None else None,
     )
+    tcn_summary = build_summary(
+        tcn_returns,
+        tcn_result.turnover.reindex(tcn_returns.index),
+        tcn_result.benchmark_returns.reindex(tcn_returns.index) if tcn_result.benchmark_returns is not None else None,
+    )
 
     baseline_curve = _build_value_curve(baseline_returns, benchmark_returns, args.initial_capital)
     ridge_curve = _build_value_curve(ridge_returns, benchmark_returns, args.initial_capital)
+    tree_curve = _build_value_curve(tree_returns, benchmark_returns, args.initial_capital)
     mlp_curve = _build_value_curve(mlp_returns, benchmark_returns, args.initial_capital)
+    tcn_curve = _build_value_curve(tcn_returns, benchmark_returns, args.initial_capital)
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -322,10 +502,28 @@ def main() -> None:
                 args.initial_capital,
             ),
             _build_summary_row(
+                "tree_walkforward",
+                tree_summary,
+                tree_history.loc[tree_history["date"] >= eval_start_actual],
+                tree_curve,
+                eval_start_actual,
+                eval_end_actual,
+                args.initial_capital,
+            ),
+            _build_summary_row(
                 "mlp_walkforward",
                 mlp_summary,
                 mlp_history.loc[mlp_history["date"] >= eval_start_actual],
                 mlp_curve,
+                eval_start_actual,
+                eval_end_actual,
+                args.initial_capital,
+            ),
+            _build_summary_row(
+                "tcn_walkforward",
+                tcn_summary,
+                tcn_history.loc[tcn_history["date"] >= eval_start_actual],
+                tcn_curve,
                 eval_start_actual,
                 eval_end_actual,
                 args.initial_capital,
@@ -336,12 +534,14 @@ def main() -> None:
     summary_path = output_dir / "deep_learning_summary_last_year.csv"
     summary_frame.to_csv(summary_path, index=False)
 
-    values_frame = pd.DataFrame({"date": mlp_curve["date"]})
+    values_frame = pd.DataFrame({"date": tcn_curve["date"]})
     values_frame["configured_baseline_value"] = baseline_curve["strategy_value"].to_numpy()
     values_frame["ridge_walkforward_value"] = ridge_curve["strategy_value"].to_numpy()
+    values_frame["tree_walkforward_value"] = tree_curve["strategy_value"].to_numpy()
     values_frame["mlp_walkforward_value"] = mlp_curve["strategy_value"].to_numpy()
-    if "benchmark_value" in mlp_curve.columns:
-        values_frame["benchmark_value"] = mlp_curve["benchmark_value"].to_numpy()
+    values_frame["tcn_walkforward_value"] = tcn_curve["strategy_value"].to_numpy()
+    if "benchmark_value" in tcn_curve.columns:
+        values_frame["benchmark_value"] = tcn_curve["benchmark_value"].to_numpy()
     values_path = output_dir / "deep_learning_values_last_year.csv"
     values_frame.to_csv(values_path, index=False)
 
@@ -357,9 +557,73 @@ def main() -> None:
         output_dir / "ridge_walkforward_history_last_year.csv",
         index=False,
     )
-    mlp_history.loc[mlp_history["date"] >= eval_start_actual].to_csv(
-        output_dir / "mlp_walkforward_history_last_year.csv",
+    tree_history_path = output_dir / "tree_walkforward_history_last_year.csv"
+    tree_history.loc[tree_history["date"] >= eval_start_actual].to_csv(
+        tree_history_path,
         index=False,
+    )
+    mlp_history_path = output_dir / "mlp_walkforward_history_last_year.csv"
+    mlp_history.loc[mlp_history["date"] >= eval_start_actual].to_csv(
+        mlp_history_path,
+        index=False,
+    )
+    tcn_history_path = output_dir / "tcn_walkforward_history_last_year.csv"
+    tcn_history.loc[tcn_history["date"] >= eval_start_actual].to_csv(
+        tcn_history_path,
+        index=False,
+    )
+    manifest = build_run_manifest(
+        config,
+        experiment_name="deep_learning_report",
+        extra={
+            "lookback_days": args.lookback_days,
+            "label_horizon_days": args.label_horizon_days,
+            "validation_window_days": args.validation_window_days,
+            "embargo_days": args.embargo_days,
+            "min_training_samples": args.min_training_samples,
+            "min_validation_samples": args.min_validation_samples,
+            "ridge_alpha": args.ridge_alpha,
+            "tree_learning_rate": args.tree_learning_rate,
+            "tree_max_iter": args.tree_max_iter,
+            "tree_max_depth": args.tree_max_depth,
+            "tree_min_samples_leaf": args.tree_min_samples_leaf,
+            "tree_l2_regularization": args.tree_l2_regularization,
+            "hidden_dim": args.hidden_dim,
+            "learning_rate": args.learning_rate,
+            "max_epochs": args.max_epochs,
+            "batch_size": args.batch_size,
+            "weight_decay": args.weight_decay,
+            "patience": args.patience,
+            "sequence_lookback_window": args.sequence_lookback_window,
+            "sequence_kernel_size": args.sequence_kernel_size,
+            "sequence_hidden_channels": args.sequence_hidden_channels,
+            "sequence_learning_rate": args.sequence_learning_rate,
+            "sequence_max_epochs": args.sequence_max_epochs,
+            "sequence_batch_size": args.sequence_batch_size,
+            "sequence_weight_decay": args.sequence_weight_decay,
+            "sequence_patience": args.sequence_patience,
+            "use_llm_feature": args.use_llm_feature and config.llm.enabled,
+            "latest_market_date": latest_date.date().isoformat(),
+            "market_data_source": market_data.provenance.get("source"),
+            "market_data_manifest_path": market_data.provenance.get("manifest_path"),
+            "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
+        },
+    )
+    save_manifest(
+        output_dir / "report_manifest.json",
+        attach_output_files(
+            manifest,
+            {
+                "summary": summary_path,
+                "values": values_path,
+                "chart": chart_path,
+                "baseline_history": output_dir / "configured_baseline_history_last_year.csv",
+                "ridge_history": output_dir / "ridge_walkforward_history_last_year.csv",
+                "tree_history": tree_history_path,
+                "mlp_history": mlp_history_path,
+                "tcn_history": tcn_history_path,
+            },
+        ),
     )
 
     print(summary_frame.to_string(index=False))

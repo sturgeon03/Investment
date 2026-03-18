@@ -54,8 +54,14 @@ def generate_target_weights(
     snapshots: list[pd.DataFrame] = []
     for rebalance_date in _rebalance_dates(scored, config.rebalance):
         snapshot = scored.loc[scored["date"] == rebalance_date].copy()
+        eligible_universe = (
+            snapshot["eligible_universe"].fillna(False)
+            if "eligible_universe" in snapshot.columns
+            else pd.Series(True, index=snapshot.index)
+        )
         base_eligible = snapshot.loc[
-            snapshot["enough_history"]
+            eligible_universe
+            & snapshot["enough_history"]
             & snapshot["ret_20"].notna()
             & snapshot["ret_60"].notna()
             & snapshot["vol_20"].notna()

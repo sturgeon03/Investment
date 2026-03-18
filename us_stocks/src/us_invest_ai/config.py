@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,6 +13,9 @@ class DataConfig:
     benchmark: str
     start: str
     end: str | None
+    tickers_file: Path | None = None
+    metadata_file: Path | None = None
+    universe_snapshots_file: Path | None = None
 
 
 @dataclass(slots=True)
@@ -25,6 +29,13 @@ class StrategyConfig:
     momentum_60_weight: float
     volatility_weight: float
     llm_weight: float
+
+
+@dataclass(slots=True)
+class EligibilityConfig:
+    min_close_price: float
+    min_dollar_volume_20: float
+    min_universe_age_days: int
 
 
 @dataclass(slots=True)
@@ -80,9 +91,11 @@ class WorkflowConfig:
 
 @dataclass(slots=True)
 class RunConfig:
+    config_path: Path
     project_root: Path
     data: DataConfig
     strategy: StrategyConfig
+    eligibility: EligibilityConfig
     backtest: BacktestConfig
     llm: LLMConfig
     scoring: ScoringConfig
@@ -98,13 +111,88 @@ def _resolve_path(project_root: Path, value: str) -> Path:
     return project_root / path
 
 
+def _load_ticker_file(path: Path) -> list[str]:
+    raw = path.read_text(encoding="utf-8")
+    tokens: list[str] = []
+    for line in raw.splitlines():
+        stripped = line.split("#", 1)[0].strip()
+        if not stripped:
+            continue
+        tokens.extend(part.strip().upper() for part in stripped.replace(",", " ").split())
+
+    tickers = [ticker for ticker in tokens if ticker]
+    if not tickers:
+        raise ValueError(f"No tickers found in ticker file: {path}")
+    return tickers
+
+
+def _load_snapshot_tickers(path: Path) -> list[str]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            raise ValueError(f"Universe snapshots file is empty: {path}")
+
+        required = {"effective_date", "ticker"}
+        missing = required.difference(reader.fieldnames)
+        if missing:
+            raise ValueError(
+                f"Universe snapshots file is missing columns {sorted(missing)}: {path}"
+            )
+
+        tickers: list[str] = []
+        seen: set[str] = set()
+        for row in reader:
+            ticker = str(row.get("ticker", "")).strip().upper()
+            if not ticker or ticker in seen:
+                continue
+            seen.add(ticker)
+            tickers.append(ticker)
+
+    if not tickers:
+        raise ValueError(f"No tickers found in universe snapshots file: {path}")
+    return tickers
+
+
 def load_config(config_path: str | Path) -> RunConfig:
     config_file = Path(config_path).resolve()
     project_root = config_file.parent.parent
     payload = yaml.safe_load(config_file.read_text(encoding="utf-8"))
 
-    data = DataConfig(**payload["data"])
+    data_payload = payload["data"]
+    tickers_file = data_payload.get("tickers_file")
+    resolved_tickers_file = _resolve_path(project_root, tickers_file) if tickers_file else None
+    universe_snapshots_file = data_payload.get("universe_snapshots_file")
+    resolved_universe_snapshots_file = (
+        _resolve_path(project_root, universe_snapshots_file)
+        if universe_snapshots_file
+        else None
+    )
+    tickers = data_payload.get("tickers")
+    if resolved_universe_snapshots_file is not None:
+        tickers = _load_snapshot_tickers(resolved_universe_snapshots_file)
+    if resolved_tickers_file is not None:
+        tickers = _load_ticker_file(resolved_tickers_file)
+    if not tickers:
+        raise ValueError(
+            "Config data section must define tickers, tickers_file, or universe_snapshots_file."
+        )
+    data = DataConfig(
+        tickers=[str(ticker).upper() for ticker in tickers],
+        benchmark=str(data_payload["benchmark"]).upper(),
+        start=str(data_payload["start"]),
+        end=data_payload.get("end"),
+        tickers_file=resolved_tickers_file,
+        metadata_file=_resolve_path(project_root, data_payload["metadata_file"])
+        if data_payload.get("metadata_file")
+        else None,
+        universe_snapshots_file=resolved_universe_snapshots_file,
+    )
     strategy = StrategyConfig(**payload["strategy"])
+    eligibility = EligibilityConfig(
+        min_close_price=float(payload.get("eligibility", {}).get("min_close_price", 0.0)),
+        min_dollar_volume_20=float(payload.get("eligibility", {}).get("min_dollar_volume_20", 0.0)),
+        min_universe_age_days=int(payload.get("eligibility", {}).get("min_universe_age_days", 0)),
+    )
     backtest = BacktestConfig(**payload["backtest"])
     llm = LLMConfig(
         enabled=payload["llm"]["enabled"],
@@ -150,9 +238,11 @@ def load_config(config_path: str | Path) -> RunConfig:
     )
 
     return RunConfig(
+        config_path=config_file,
         project_root=project_root,
         data=data,
         strategy=strategy,
+        eligibility=eligibility,
         backtest=backtest,
         llm=llm,
         scoring=scoring,

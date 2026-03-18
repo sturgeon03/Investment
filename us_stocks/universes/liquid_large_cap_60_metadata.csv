@@ -1,0 +1,61 @@
+ticker,sector,industry
+AAPL,Technology,Consumer Electronics
+ABBV,Health Care,Biotechnology
+ABT,Health Care,Health Care Equipment
+ACN,Technology,IT Services
+ADBE,Technology,Application Software
+AMD,Technology,Semiconductors
+AMGN,Health Care,Biotechnology
+AMZN,Consumer Discretionary,Broadline Retail
+AVGO,Technology,Semiconductors
+AXP,Financials,Consumer Finance
+BA,Industrials,Aerospace and Defense
+BKNG,Consumer Discretionary,Hotels and Resorts
+C,Financials,Diversified Banks
+CAT,Industrials,Construction Machinery
+CMCSA,Communication Services,Cable and Satellite
+COP,Energy,Oil and Gas Exploration
+COST,Consumer Staples,Consumer Staples Merchandise Retail
+CRM,Technology,Application Software
+CSCO,Technology,Communications Equipment
+CVX,Energy,Integrated Oil and Gas
+DHR,Health Care,Life Sciences Tools
+DIS,Communication Services,Movies and Entertainment
+GE,Industrials,Aerospace and Defense
+GILD,Health Care,Biotechnology
+GOOGL,Communication Services,Interactive Media and Services
+GS,Financials,Investment Banking and Brokerage
+HD,Consumer Discretionary,Home Improvement Retail
+IBM,Technology,IT Consulting
+INTC,Technology,Semiconductors
+INTU,Technology,Application Software
+JNJ,Health Care,Pharmaceuticals
+JPM,Financials,Diversified Banks
+KO,Consumer Staples,Soft Drinks
+LIN,Materials,Industrial Gases
+LLY,Health Care,Pharmaceuticals
+LOW,Consumer Discretionary,Home Improvement Retail
+MA,Financials,Transaction and Payment Processing
+MCD,Consumer Discretionary,Restaurants
+META,Communication Services,Interactive Media and Services
+MMM,Industrials,Industrial Conglomerates
+MRK,Health Care,Pharmaceuticals
+MSFT,Technology,Systems Software
+NEE,Utilities,Electric Utilities
+NFLX,Communication Services,Movies and Entertainment
+NVDA,Technology,Semiconductors
+ORCL,Technology,Application Software
+PEP,Consumer Staples,Soft Drinks
+PFE,Health Care,Pharmaceuticals
+PG,Consumer Staples,Household Products
+PM,Consumer Staples,Tobacco
+QCOM,Technology,Semiconductors
+RTX,Industrials,Aerospace and Defense
+SBUX,Consumer Discretionary,Restaurants
+SCHW,Financials,Investment Banking and Brokerage
+T,Communication Services,Integrated Telecommunication Services
+TMO,Health Care,Life Sciences Tools
+TXN,Technology,Semiconductors
+UNH,Health Care,Managed Health Care
+UNP,Industrials,Rail Transportation
+XOM,Energy,Integrated Oil and Gas

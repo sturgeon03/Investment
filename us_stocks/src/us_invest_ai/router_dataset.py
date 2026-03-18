@@ -27,10 +27,18 @@ def _best_realized_horizon_label(row: pd.Series) -> str:
 def _serialize_price_features(row: pd.Series) -> str:
     payload = {
         "ret_1": float(row["ret_1"]) if pd.notna(row["ret_1"]) else None,
+        "ret_5": float(row["ret_5"]) if pd.notna(row.get("ret_5")) else None,
         "ret_20": float(row["ret_20"]) if pd.notna(row["ret_20"]) else None,
         "ret_60": float(row["ret_60"]) if pd.notna(row["ret_60"]) else None,
+        "rel_ret_20": float(row["rel_ret_20"]) if pd.notna(row.get("rel_ret_20")) else None,
+        "rel_ret_60": float(row["rel_ret_60"]) if pd.notna(row.get("rel_ret_60")) else None,
         "vol_20": float(row["vol_20"]) if pd.notna(row["vol_20"]) else None,
+        "vol_60": float(row["vol_60"]) if pd.notna(row.get("vol_60")) else None,
+        "price_vs_sma50": float(row["price_vs_sma50"]) if pd.notna(row.get("price_vs_sma50")) else None,
+        "benchmark_ret_20": float(row["benchmark_ret_20"]) if pd.notna(row.get("benchmark_ret_20")) else None,
+        "benchmark_vol_20": float(row["benchmark_vol_20"]) if pd.notna(row.get("benchmark_vol_20")) else None,
         "trend_ok": bool(row["trend_ok"]) if pd.notna(row["trend_ok"]) else None,
+        "market_trend_ok": bool(row["market_trend_ok"]) if pd.notna(row.get("market_trend_ok")) else None,
     }
     return json.dumps(payload, sort_keys=True)
 
@@ -69,21 +77,31 @@ def build_router_training_frame(features: pd.DataFrame, llm_scores: pd.DataFrame
         feature_group = feature_frame.loc[feature_frame["ticker"] == ticker].copy()
         if feature_group.empty:
             continue
+        desired_columns = [
+            "date",
+            "ret_1",
+            "ret_5",
+            "ret_20",
+            "ret_60",
+            "rel_ret_20",
+            "rel_ret_60",
+            "vol_20",
+            "vol_60",
+            "price_vs_sma50",
+            "benchmark_ret_20",
+            "benchmark_vol_20",
+            "trend_ok",
+            "market_trend_ok",
+            "next_5d_return",
+            "next_20d_return",
+            "next_60d_return",
+        ]
+        for column in desired_columns:
+            if column not in feature_group.columns:
+                feature_group[column] = pd.NA
         aligned = pd.merge_asof(
             score_group.sort_values("date"),
-            feature_group[
-                [
-                    "date",
-                    "ret_1",
-                    "ret_20",
-                    "ret_60",
-                    "vol_20",
-                    "trend_ok",
-                    "next_5d_return",
-                    "next_20d_return",
-                    "next_60d_return",
-                ]
-            ].sort_values("date"),
+            feature_group[desired_columns].sort_values("date"),
             on="date",
             direction="backward",
         )

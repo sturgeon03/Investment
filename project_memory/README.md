@@ -12,6 +12,7 @@ Use it as the single place to maintain:
 ## Structure
 
 - `ai-quant-research-skill/`: repo-local Codex skill and its references
+- `ai-quant-research-skill/references/review-followups.md`: external review items split into fixed-now vs backlog
 - `sync_skill_to_codex.ps1`: sync the repo-local skill into `C:\Users\sym89\.codex\skills`
 
 ## Maintenance Rule

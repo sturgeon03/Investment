@@ -1,0 +1,181 @@
+{
+  "config": {
+    "backtest": {
+      "transaction_cost_bps": 10.0
+    },
+    "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_30_phased_eligibility.yaml",
+    "data": {
+      "benchmark": "SPY",
+      "end": null,
+      "metadata_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_metadata.csv",
+      "start": "2018-01-01",
+      "tickers": [
+        "AAPL",
+        "AMZN",
+        "AVGO",
+        "COST",
+        "GOOGL",
+        "JPM",
+        "META",
+        "MSFT",
+        "NVDA",
+        "XOM",
+        "ABBV",
+        "BAC",
+        "CRM",
+        "HD",
+        "JNJ",
+        "KO",
+        "MA",
+        "PG",
+        "V",
+        "WMT",
+        "AMD",
+        "CVX",
+        "LLY",
+        "MRK",
+        "NFLX",
+        "ORCL",
+        "PEP",
+        "TMO",
+        "TSLA",
+        "UNH"
+      ],
+      "tickers_file": null,
+      "universe_snapshots_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_phased_snapshots.csv"
+    },
+    "eligibility": {
+      "min_close_price": 5.0,
+      "min_dollar_volume_20": 50000000.0,
+      "min_universe_age_days": 120
+    },
+    "llm": {
+      "enabled": false,
+      "horizon_bucket": "swing",
+      "signal_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\signals\\llm_scores.generated.csv"
+    },
+    "output": {
+      "artifacts_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30_phased_eligibility",
+      "data_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility"
+    },
+    "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks",
+    "risk": {
+      "allow_fractional_shares": true,
+      "capital_base": 100000.0,
+      "cash_buffer": 0.04,
+      "max_position_weight": 0.12,
+      "min_trade_notional": 250.0
+    },
+    "scoring": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "base_url": "https://api.deepseek.com",
+      "env_file": null,
+      "model": "deepseek-chat",
+      "provider": "heuristic",
+      "temperature": 0.0,
+      "timeout_seconds": 60
+    },
+    "strategy": {
+      "llm_weight": 0.0,
+      "min_history_days": 200,
+      "momentum_20_weight": 0.45,
+      "momentum_60_weight": 0.35,
+      "rebalance": "monthly",
+      "top_n": 8,
+      "trend_filter_mode": "soft",
+      "trend_penalty": 0.35,
+      "volatility_weight": -0.2
+    },
+    "workflow": {
+      "apply_paper_orders": false,
+      "forms": [
+        "10-K",
+        "10-Q",
+        "8-K"
+      ],
+      "limit_per_ticker": 1,
+      "max_chars": 200000,
+      "min_section_chars": 250,
+      "output_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\runs",
+      "pause_seconds": 0.25,
+      "positions_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\paper\\current_positions.csv",
+      "start_date_lookback_days": 180
+    }
+  },
+  "config_file_sha256": "7e63ff21b04bc197f0b73b7215faa66b0e568f5f3f4466df9dcff4f5f62d4752",
+  "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_30_phased_eligibility.yaml",
+  "config_snapshot_sha256": "84d4b272423743d222695cc2d824d877c17f1fe15db6192bf0e9849e11b2afd5",
+  "experiment_name": "research_pipeline",
+  "extra": {
+    "current_positions_path": null,
+    "current_positions_sha256": null,
+    "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\raw\\market_data_manifest.json",
+    "market_data_manifest_sha256": "07b340015931979cf020297561d82b893f13ce43b70c0c6c34892db9437a13d4",
+    "market_data_source": "cache",
+    "portfolio_date": null
+  },
+  "generated_at_utc": "2026-03-17T17:00:13.581895+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "233780e17a065c80b82bf86327827d4ae53e6e72",
+    "dirty": true
+  },
+  "inputs": {
+    "llm_signal_path": null,
+    "llm_signal_sha256": null,
+    "metadata_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_metadata.csv",
+    "metadata_file_sha256": "5a38cf31c460fe52c52c07439f55dc14db5fe5bba927a8db83cdf155fa0398f6",
+    "tickers_file_path": null,
+    "tickers_file_sha256": null,
+    "universe_snapshots_file_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_phased_snapshots.csv",
+    "universe_snapshots_file_sha256": "400212341bcf056529285d2cbd904ec50e789ac755a0667dea7200d6dd156f72"
+  },
+  "output_files": {
+    "benchmark": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\raw\\benchmark.csv",
+      "sha256": "92b28b698e0e00ad1218c52c828065ba57d1144ac565468116c661c8a52a2ef7"
+    },
+    "equity_curve": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30_phased_eligibility\\equity_curve.csv",
+      "sha256": "7143dc7ec0bf456a6e05cdbfeb87d78c5078967d69e5441ad5cd976991b75426"
+    },
+    "features": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\processed\\features.csv",
+      "sha256": "638d5998fd9a78510721add1d382a170686eb8e3a928d236d9132c8613e13c43"
+    },
+    "market_data_manifest": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\raw\\market_data_manifest.json",
+      "sha256": "07b340015931979cf020297561d82b893f13ce43b70c0c6c34892db9437a13d4"
+    },
+    "prices": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\raw\\prices.csv",
+      "sha256": "13bf9f0cebcc812ef47198eda93a67720417d7f33cd59118bd200fd91e58a7fd"
+    },
+    "ranking_history": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30_phased_eligibility\\ranking_history.csv",
+      "sha256": "09eac25d914f3a872aa44ad88a684054348d2e8315d57d9cfdd8a8569586e468"
+    },
+    "summary": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30_phased_eligibility\\summary.csv",
+      "sha256": "3d395a2b4682fde61aaa2ab089be7afdf5823a07c0afee4546864ef82567b47b"
+    },
+    "target_portfolio": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30_phased_eligibility\\target_portfolio.csv",
+      "sha256": "524c55351e84e2866a85235bdfac90137df3a10355517434b6f026b56b30dd95"
+    },
+    "target_weights": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30_phased_eligibility\\target_weights.csv",
+      "sha256": "5c8c171946f5784f8400d9c56ea8e33127a4e6ca3f929658a4988eb979cd08b5"
+    }
+  },
+  "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks"
+}

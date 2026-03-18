@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 
 from us_invest_ai.backtest import build_summary, run_backtest
-from us_invest_ai.config import DataConfig, load_config
-from us_invest_ai.data import download_ohlcv
+from us_invest_ai.config import DataConfig, EligibilityConfig, load_config
+from us_invest_ai.data import prepare_market_data_bundle
+from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
 from us_invest_ai.features import build_features
 from us_invest_ai.signals import load_llm_scores
 from us_invest_ai.strategy import generate_target_weights
@@ -42,11 +43,17 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _assert_matching_market_data(reference: DataConfig, candidate: DataConfig, config_path: Path) -> None:
-    if asdict(reference) != asdict(candidate):
+def _assert_matching_market_data(
+    reference: DataConfig,
+    reference_eligibility: EligibilityConfig,
+    candidate: DataConfig,
+    candidate_eligibility: EligibilityConfig,
+    config_path: Path,
+) -> None:
+    if asdict(reference) != asdict(candidate) or asdict(reference_eligibility) != asdict(candidate_eligibility):
         raise ValueError(
             f"Config {config_path} does not match the market data settings of the first config. "
-            "Compare configs only when tickers, benchmark, and date range are identical."
+            "Compare configs only when data, universe, and eligibility settings are identical."
         )
 
 
@@ -119,20 +126,39 @@ def main() -> None:
         raise ValueError("At least one config is required.")
 
     reference_data = configs[0].data
+    reference_eligibility = configs[0].eligibility
     for config_path, config in zip(args.configs[1:], configs[1:]):
-        _assert_matching_market_data(reference_data, config.data, Path(config_path))
+        _assert_matching_market_data(
+            reference_data,
+            reference_eligibility,
+            config.data,
+            config.eligibility,
+            Path(config_path),
+        )
 
-    prices = download_ohlcv(
+    market_data = prepare_market_data_bundle(
+        data_dir=configs[0].output.data_dir,
         tickers=reference_data.tickers,
+        benchmark=reference_data.benchmark,
         start=reference_data.start,
         end=reference_data.end,
+        tickers_file=configs[0].data.tickers_file,
+        metadata_file=configs[0].data.metadata_file,
+        universe_snapshots_file=configs[0].data.universe_snapshots_file,
     )
-    benchmark_prices = download_ohlcv(
-        tickers=[reference_data.benchmark],
-        start=reference_data.start,
-        end=reference_data.end,
+    prices = market_data.prices
+    benchmark_prices = market_data.benchmark_prices
+    features = build_features(
+        prices,
+        benchmark_prices,
+        market_data.ticker_metadata,
+        market_data.universe_snapshots,
+        {
+            "min_close_price": configs[0].eligibility.min_close_price,
+            "min_dollar_volume_20": configs[0].eligibility.min_dollar_volume_20,
+            "min_universe_age_days": configs[0].eligibility.min_universe_age_days,
+        },
     )
-    features = build_features(prices)
 
     runs: list[dict[str, object]] = []
     for config_path, config in zip(args.configs, configs):
@@ -147,6 +173,7 @@ def main() -> None:
             target_weights=weights,
             transaction_cost_bps=config.backtest.transaction_cost_bps,
             benchmark_prices=benchmark_prices,
+            risk_config=config.risk,
         )
         runs.append(
             {
@@ -175,6 +202,18 @@ def main() -> None:
     output_path = Path(args.output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     comparison.to_csv(output_path, index=False)
+    manifest = build_run_manifest(
+        configs[0],
+        experiment_name="compare_configs",
+        extra={
+            "configs": [str(Path(config_path).resolve()) for config_path in args.configs],
+            "eval_start": args.eval_start,
+            "market_data_source": market_data.provenance.get("source"),
+            "market_data_manifest_path": market_data.provenance.get("manifest_path"),
+            "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
+        },
+    )
+    save_manifest(output_path.parent / "comparison_manifest.json", attach_output_files(manifest, {"comparison": output_path}))
 
     print(comparison.to_string(index=False))
     print(f"Saved comparison to: {output_path}")

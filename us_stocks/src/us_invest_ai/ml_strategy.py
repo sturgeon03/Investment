@@ -128,7 +128,8 @@ def generate_ml_target_weights(
             continue
 
         train_frame = frame.loc[
-            frame["enough_history"]
+            frame["eligible_universe"]
+            & frame["enough_history"]
             & frame["has_model_features"]
             & frame["has_training_label"]
             & (pd.to_datetime(frame["label_available_date"]).dt.normalize() < rebalance_date)
@@ -138,7 +139,8 @@ def generate_ml_target_weights(
             continue
 
         eligible = snapshot.loc[
-            snapshot["enough_history"]
+            snapshot["eligible_universe"]
+            & snapshot["enough_history"]
             & snapshot["has_model_features"]
         ].copy()
         if strategy_config.trend_filter_mode == "hard":

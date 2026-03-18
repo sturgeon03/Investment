@@ -1,0 +1,78 @@
+{
+  "benchmark_file": {
+    "exists": true,
+    "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\raw\\benchmark.csv",
+    "sha256": "22bfb49ab29340b243e913f78ae7ed4889557d7ee231db0e2f0ce0839f9c8045"
+  },
+  "benchmark_summary": {
+    "end_date": "2026-03-17",
+    "rows": 2062,
+    "start_date": "2018-01-02",
+    "ticker_count": 1
+  },
+  "generated_at_utc": "2026-03-17T16:59:59.265847+00:00",
+  "inputs": {
+    "metadata_file": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_metadata.csv",
+      "sha256": "5a38cf31c460fe52c52c07439f55dc14db5fe5bba927a8db83cdf155fa0398f6"
+    },
+    "tickers_file": null,
+    "universe_snapshots_file": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_phased_snapshots.csv",
+      "sha256": "400212341bcf056529285d2cbd904ec50e789ac755a0667dea7200d6dd156f72"
+    }
+  },
+  "metadata_rows": 30,
+  "prices_file": {
+    "exists": true,
+    "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30_phased_eligibility\\raw\\prices.csv",
+    "sha256": "09088701d3c8f4014002691a43024946b8c78e7093dcbbdfb188095949e60a71"
+  },
+  "prices_summary": {
+    "end_date": "2026-03-17",
+    "rows": 61860,
+    "start_date": "2018-01-02",
+    "ticker_count": 30
+  },
+  "query": {
+    "benchmark": "SPY",
+    "end": null,
+    "start": "2018-01-01",
+    "tickers": [
+      "AAPL",
+      "AMZN",
+      "AVGO",
+      "COST",
+      "GOOGL",
+      "JPM",
+      "META",
+      "MSFT",
+      "NVDA",
+      "XOM",
+      "ABBV",
+      "BAC",
+      "CRM",
+      "HD",
+      "JNJ",
+      "KO",
+      "MA",
+      "PG",
+      "V",
+      "WMT",
+      "AMD",
+      "CVX",
+      "LLY",
+      "MRK",
+      "NFLX",
+      "ORCL",
+      "PEP",
+      "TMO",
+      "TSLA",
+      "UNH"
+    ]
+  },
+  "snapshot_rows": 60,
+  "source": "cache"
+}

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from us_invest_ai.config import load_config
+from us_invest_ai.experiment_manifest import build_run_manifest, sha256_file
 from us_invest_ai.pipeline import run_research_pipeline, save_research_outputs
 from us_invest_ai.portfolio import (
     build_next_positions,
@@ -37,6 +39,7 @@ def main() -> None:
     args = _parse_args()
     config = load_config(args.config)
     run = run_research_pipeline(config)
+    current_positions_path = Path(args.current_positions_csv).resolve() if args.current_positions_csv else None
     target_portfolio = build_target_portfolio(
         target_weights=run.target_weights,
         prices=run.prices,
@@ -47,7 +50,7 @@ def main() -> None:
     next_positions = None
 
     if args.current_positions_csv:
-        current_positions = load_current_positions(args.current_positions_csv)
+        current_positions = load_current_positions(current_positions_path)
         latest_prices = latest_prices_by_ticker(run.prices, as_of_date=args.portfolio_date)
         recommended_orders = build_rebalance_orders(
             target_portfolio,
@@ -64,6 +67,30 @@ def main() -> None:
         target_portfolio=target_portfolio,
         recommended_orders=recommended_orders,
         next_positions=next_positions,
+        manifest=build_run_manifest(
+            config,
+            experiment_name="research_pipeline",
+            extra={
+                "portfolio_date": args.portfolio_date,
+                "current_positions_path": str(current_positions_path) if current_positions_path else None,
+                "current_positions_sha256": sha256_file(current_positions_path),
+                "market_data_source": (
+                    run.market_data_provenance.get("source")
+                    if run.market_data_provenance
+                    else None
+                ),
+                "market_data_manifest_path": (
+                    run.market_data_provenance.get("manifest_path")
+                    if run.market_data_provenance
+                    else None
+                ),
+                "market_data_manifest_sha256": (
+                    run.market_data_provenance.get("manifest_sha256")
+                    if run.market_data_provenance
+                    else None
+                ),
+            },
+        ),
     )
 
     print(run.backtest_result.summary.to_string(index=False))

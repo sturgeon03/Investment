@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 ## Repository Status
 
@@ -19,6 +19,17 @@ The US project already includes:
 - backtest engine and config-based comparisons
 - paper portfolio and order preview workflow
 - supervised ML baseline using labeled forward returns
+- purged walk-forward helpers and an initial MLP research lane
+- gradient-boosted tree walk-forward baseline
+- run/report manifests with config and signal provenance hashes
+- richer price and volume feature engineering for supervised models
+- benchmark-relative and regime-aware feature engineering for supervised models
+- expanded 30-name large-cap universe config using `tickers_file`
+- sector-aware and cross-sectional context features for supervised models
+- approximate point-in-time large-cap experiments using `universe_snapshots_file`
+- retry/backoff hardening for `yfinance` and SEC fetch paths
+- point-in-time eligibility rules on close price, rolling dollar volume, and universe age
+- free-approx dynamic monthly snapshot generation for a broader 60-name large-cap candidate pool
 
 ## What The Project Is Right Now
 
@@ -67,16 +78,159 @@ Interpretation:
 - but it underperformed the configured baseline
 - there is no evidence yet that the repo has a superior AI alpha model
 
+Recent 1-year walk-forward model comparison:
+
+- baseline: about `$163,834`
+- ridge walk-forward: about `$158,832`
+- tree walk-forward: about `$139,001`
+- MLP walk-forward: about `$145,947`
+
+Interpretation:
+
+- benchmark-relative and regime-aware features materially improved the ridge walk-forward model
+- ridge is now much closer to the configured price baseline than before
+- the stronger learned models still underperform the configured price baseline
+- this is useful negative evidence
+- the bottleneck is now more likely data scope and universe design than model family choice alone
+
+Expanded 30-name large-cap universe 1-year walk-forward comparison:
+
+- baseline: about `$123,275`
+- tree walk-forward: about `$113,386`
+- MLP walk-forward: about `$111,688`
+- ridge walk-forward: about `$110,500`
+
+Interpretation:
+
+- widening the universe reduced the baseline's raw CAGR versus the 10-name basket, which is expected
+- the learned models underperform more clearly on the wider universe than they did on the 10-name basket
+- this suggests the next bottleneck is cross-sectional context, sector structure, and universe design rather than simply adding more model families
+
+Expanded 30-name phased snapshot universe 1-year walk-forward comparison:
+
+- baseline: about `$123,275`
+- tree walk-forward: about `$117,558`
+- MLP walk-forward: about `$114,823`
+- ridge walk-forward: about `$107,251`
+
+Interpretation:
+
+- the last-year baseline is unchanged because the active 2025-2026 universe is the same as the static 30-name config
+- the phased snapshot file changes the historical training context rather than the final evaluation constituents
+- tree and MLP improved meaningfully relative to the static 30-name run
+- ridge deteriorated under the same change
+- this is evidence that universe history assumptions matter, even before moving to true point-in-time constituent data
+
+Repeated-window stability report over four 252-trading-day windows:
+
+Static 30-name universe:
+
+- baseline average ending capital: about `$119,065`
+- ridge average ending capital: about `$117,462`
+- MLP average ending capital: about `$114,184`
+- tree average ending capital: about `$108,491`
+
+Phased 30-name universe:
+
+- baseline average ending capital: about `$119,122`
+- ridge average ending capital: about `$114,780`
+- MLP average ending capital: about `$113,716`
+- tree average ending capital: about `$113,701`
+
+Interpretation:
+
+- the rules baseline still has the strongest average multi-window result
+- ridge remains the strongest learned-model family overall
+- phased universe history helped tree and MLP materially across repeated windows
+- the repo now has evidence that data realism changes the learned-model ranking
+- that pushes the next bottleneck further toward universe realism and data quality, not random model-family expansion
+
+Phased 30-name universe with point-in-time eligibility filters:
+
+- latest 1-year OOS ending capital:
+  baseline about `$122,956`
+  MLP about `$123,183`
+  tree about `$121,720`
+  ridge about `$112,517`
+- repeated 4-window average ending capital:
+  baseline about `$119,781`
+  tree about `$115,188`
+  MLP about `$114,224`
+  ridge about `$110,608`
+
+Interpretation:
+
+- adding point-in-time eligibility rules improved learned-model realism and latest-window competitiveness
+- the latest 1-year window now shows MLP roughly at parity with, and slightly ahead of, the baseline on ending capital
+- across repeated windows the baseline still leads on average
+- this is the strongest learned-model result so far in the repo, but it is still not enough to declare stable AI alpha
+
+Free-approx dynamic 60-name universe with point-in-time eligibility filters:
+
+- latest 1-year OOS ending capital:
+  baseline about `$118,294`
+  ridge about `$116,877`
+  MLP about `$114,915`
+  tree about `$113,542`
+- repeated 4-window average ending capital:
+  tree about `$119,183`
+  baseline about `$115,607`
+  ridge about `$113,319`
+  MLP about `$112,204`
+
+Interpretation:
+
+- the stronger dynamic universe lowers the optimistic latest-window numbers seen in the smaller 30-name phased lane
+- on the latest 1-year window the rules baseline is still the strongest model
+- across repeated windows the tree model is now the strongest average learned-model family and beats the baseline in three of four windows
+- this is the first evidence in the repo that a learned model can lead the repeated-window average under a stricter universe-realism lane
+- this is still a free approximation, not institutional constituent history
+
+First sequence baseline on the dynamic 60-name lane:
+
+- latest 1-year OOS ending capital:
+  TCN about `$109,257`
+- repeated 4-window average ending capital:
+  TCN about `$111,833`
+
+Interpretation:
+
+- the first temporal convolution baseline underperforms the rules baseline and also trails the current tree leader
+- this is still a meaningful milestone because the repo now has a real sequence-model control under the stricter dynamic-universe lane
+- the next model step should be a stronger sequence baseline, likely `LSTM` or a hybrid sequence-plus-static model
+
 ## Main Gaps
 
 The biggest remaining gaps are:
 
 - survivorship bias from a fixed modern large-cap universe
 - `yfinance` quality and non-institutional data assumptions
-- simplified execution model with fixed costs only
+- execution realism is still simplified even after risk-limited backtests
 - coarse document timestamp handling
 - no purged cross-validation or embargo-style validation
-- no real deep learning baseline yet
+- no true point-in-time constituent history yet
+- only an approximate phased universe, not an institutional point-in-time membership dataset
+- no stronger post-TCN sequence baseline yet
+
+## Recent Hardening
+
+The local workspace has now hardened several items that were previously weak or ambiguous:
+
+- backtests apply `cash_buffer` and `max_position_weight`, not only paper sizing
+- summary outputs include `sortino`, `calmar`, `tracking_error`, and `information_ratio`
+- walk-forward tests explicitly guard that attached `llm_score` values survive into the learning frame
+- reports and research runs write manifests with config and signal provenance hashes
+- supervised models now train on a broader price/volume feature set instead of the original minimal tabular baseline
+- supervised models now also use benchmark-relative and market-regime features
+- supervised models now also use sector-aware and cross-sectional context features
+- the repo now supports dated universe snapshot files to approximate point-in-time membership research
+- market-data loading now writes `market_data_manifest.json` and only reuses raw cache when the request signature matches
+- price and SEC fetch paths now retry transient failures instead of failing on the first temporary error
+- the repo now supports point-in-time eligibility filters that apply to both ranking and walk-forward training
+- the repo now supports generated monthly dynamic-universe snapshots with sidecar manifests, and those manifests are linked into run/report provenance
+- the repo now also has a first temporal convolution baseline integrated into the last-year and repeated-window report stack
+
+An external static review suggested that `llm_score` was being overwritten to zero in the main strategy path. That is not true in the current local workspace. Treat that review item as stale for this branch, but keep the new regression tests.
 
 ## Immediate Conclusion
 
@@ -87,4 +241,4 @@ The repo is not yet going far enough in the direction the user actually wants:
 - the user wants AI quant investing
 - the current system is still stronger as infrastructure than as AI alpha
 
-The next stage should therefore focus on rigorous model research, not on more workflow polish.
+The next stage should therefore focus on a stronger second sequence baseline on top of the dynamic-universe lane, while keeping true constituent-history data as backlog and avoiding more workflow polish.

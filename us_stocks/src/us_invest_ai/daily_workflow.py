@@ -10,6 +10,7 @@ import pandas as pd
 
 from us_invest_ai.config import RunConfig, load_config
 from us_invest_ai.env_utils import load_env_file
+from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest, sha256_file
 from us_invest_ai.llm_scoring import (
     HeuristicScorer,
     OpenAICompatibleConfig,
@@ -367,12 +368,91 @@ def main() -> None:
         target_portfolio=target_portfolio,
         recommended_orders=recommended_orders,
         next_positions=next_positions,
+        manifest=build_run_manifest(
+            workflow_config,
+            experiment_name="daily_workflow_research",
+            extra={
+                "resolved_provider": provider,
+                "resolved_model": model if provider == "openai-compatible" else None,
+                "resolved_base_url": base_url if provider == "openai-compatible" else None,
+                "positions_path": str(positions_path),
+                "positions_sha256": sha256_file(positions_path),
+                "run_directory": str(run_dir),
+                "market_data_source": (
+                    run.market_data_provenance.get("source")
+                    if run.market_data_provenance
+                    else None
+                ),
+                "market_data_manifest_path": (
+                    run.market_data_provenance.get("manifest_path")
+                    if run.market_data_provenance
+                    else None
+                ),
+                "market_data_manifest_sha256": (
+                    run.market_data_provenance.get("manifest_sha256")
+                    if run.market_data_provenance
+                    else None
+                ),
+            },
+        ),
     )
     save_table(target_portfolio, paper_dir / "target_portfolio.csv")
     save_table(recommended_orders, paper_dir / "recommended_orders.csv")
     save_table(next_positions, paper_dir / "next_positions_preview.csv")
     if apply_paper_orders:
         save_table(next_positions, positions_path)
+
+    workflow_manifest = build_run_manifest(
+        workflow_config,
+        experiment_name="daily_workflow",
+        extra={
+            "resolved_provider": provider,
+            "resolved_model": model if provider == "openai-compatible" else None,
+            "resolved_base_url": base_url if provider == "openai-compatible" else None,
+            "start_date": start_date,
+            "forms": list(forms),
+            "limit_per_ticker": limit_per_ticker,
+            "fetched_filings": len(raw_filings),
+            "fetch_errors": len(errors),
+            "extracted_sections": len(sections),
+            "scored_section_horizon_rows": len(scored_documents),
+            "merged_signal_rows": len(merged_signal_store),
+            "llm_enabled_in_research_run": llm_enabled,
+            "positions_path": str(positions_path),
+            "positions_sha256": sha256_file(positions_path),
+            "apply_paper_orders": apply_paper_orders,
+            "market_data_source": (
+                run.market_data_provenance.get("source")
+                if run.market_data_provenance
+                else None
+            ),
+            "market_data_manifest_path": (
+                run.market_data_provenance.get("manifest_path")
+                if run.market_data_provenance
+                else None
+            ),
+            "market_data_manifest_sha256": (
+                run.market_data_provenance.get("manifest_sha256")
+                if run.market_data_provenance
+                else None
+            ),
+        },
+    )
+    workflow_manifest = attach_output_files(
+        workflow_manifest,
+        {
+            "raw_filings": raw_filings_path,
+            "sections": sections_path,
+            "detailed_scores": detailed_scores_path,
+            "aggregated_scores": aggregated_scores_path,
+            "merged_signal_store": merged_signal_store_path,
+            "paper_target_portfolio": paper_dir / "target_portfolio.csv",
+            "paper_recommended_orders": paper_dir / "recommended_orders.csv",
+            "paper_next_positions": paper_dir / "next_positions_preview.csv",
+            "paper_positions_state": positions_path if apply_paper_orders else None,
+        },
+    )
+    save_manifest(run_dir / "workflow_manifest.json", workflow_manifest)
 
     print(f"Run directory: {run_dir}")
     if env_file:

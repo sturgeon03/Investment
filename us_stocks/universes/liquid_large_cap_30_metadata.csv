@@ -1,0 +1,31 @@
+ticker,sector,industry
+AAPL,Technology,Consumer Electronics
+ABBV,Healthcare,Drug Manufacturers
+AMD,Technology,Semiconductors
+AMZN,Consumer Discretionary,Internet Retail
+AVGO,Technology,Semiconductors
+BAC,Financials,Banks
+COST,Consumer Staples,Discount Stores
+CRM,Technology,Software
+CVX,Energy,Oil & Gas
+GOOGL,Communication Services,Internet Content & Information
+HD,Consumer Discretionary,Home Improvement Retail
+JNJ,Healthcare,Drug Manufacturers
+JPM,Financials,Banks
+KO,Consumer Staples,Beverages
+LLY,Healthcare,Drug Manufacturers
+MA,Financials,Credit Services
+META,Communication Services,Internet Content & Information
+MRK,Healthcare,Drug Manufacturers
+MSFT,Technology,Software
+NFLX,Communication Services,Entertainment
+NVDA,Technology,Semiconductors
+ORCL,Technology,Software
+PEP,Consumer Staples,Beverages
+PG,Consumer Staples,Household & Personal Products
+TMO,Healthcare,Diagnostics & Research
+TSLA,Consumer Discretionary,Auto Manufacturers
+UNH,Healthcare,Healthcare Plans
+V,Financials,Credit Services
+WMT,Consumer Staples,Discount Stores
+XOM,Energy,Oil & Gas

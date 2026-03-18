@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
 from us_invest_ai.sec_filings import (
+    _sec_get_with_retry,
     clean_filing_text,
     extract_periodic_sections,
     extract_recent_filings,
@@ -14,6 +16,24 @@ from us_invest_ai.sec_filings import (
 
 
 class SECFilingsTests(unittest.TestCase):
+    def test_sec_get_with_retry_recovers_from_retryable_status(self) -> None:
+        session = Mock()
+        retryable_response = Mock()
+        retryable_response.status_code = 503
+        retryable_response.headers = {}
+        ok_response = Mock()
+        ok_response.status_code = 200
+        ok_response.headers = {}
+        ok_response.raise_for_status.return_value = None
+        session.get.side_effect = [retryable_response, ok_response]
+
+        with patch("us_invest_ai.sec_filings.time.sleep") as mocked_sleep:
+            response = _sec_get_with_retry(session, "https://example.com", timeout=30)
+
+        self.assertIs(response, ok_response)
+        self.assertEqual(session.get.call_count, 2)
+        mocked_sleep.assert_called_once()
+
     def test_extract_recent_filings_filters_forms_dates_and_limit(self) -> None:
         submissions = {
             "cik": "0000123456",

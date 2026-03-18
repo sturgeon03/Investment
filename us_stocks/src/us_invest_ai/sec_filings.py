@@ -17,6 +17,9 @@ SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 SEC_ARCHIVES_URL = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession_no_dashes}/{primary_document}"
 SEC_USER_AGENT_ENV = "SEC_USER_AGENT"
 DEFAULT_FORMS = ("10-K", "10-Q", "8-K")
+SEC_MAX_ATTEMPTS = 4
+SEC_BACKOFF_SECONDS = 1.0
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 ALLOWED_8K_ITEMS = ("2.02", "7.01", "8.01")
 EXCLUDED_8K_ITEMS = ("1.01", "5.02")
 GUIDANCE_KEYWORDS = (
@@ -90,9 +93,64 @@ def build_sec_session(user_agent: str) -> requests.Session:
     return session
 
 
+def _retry_after_seconds(response: requests.Response) -> float | None:
+    retry_after = response.headers.get("Retry-After")
+    if not retry_after:
+        return None
+    try:
+        return max(float(retry_after), 0.0)
+    except ValueError:
+        return None
+
+
+def _sleep_retry_delay(attempt_number: int, base_delay_seconds: float, retry_after_seconds: float | None = None) -> None:
+    delay = max(base_delay_seconds, 0.0) * (2 ** max(attempt_number - 1, 0))
+    if retry_after_seconds is not None:
+        delay = max(delay, retry_after_seconds)
+    if delay > 0:
+        time.sleep(delay)
+
+
+def _sec_get_with_retry(
+    session: requests.Session,
+    url: str,
+    timeout: int,
+    max_attempts: int = SEC_MAX_ATTEMPTS,
+    backoff_seconds: float = SEC_BACKOFF_SECONDS,
+) -> requests.Response:
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = session.get(url, timeout=timeout)
+            if response.status_code in RETRYABLE_STATUS_CODES:
+                last_error = requests.HTTPError(
+                    f"Retryable SEC status {response.status_code} for {url}",
+                    response=response,
+                )
+                if attempt >= max_attempts:
+                    break
+                _sleep_retry_delay(
+                    attempt_number=attempt,
+                    base_delay_seconds=backoff_seconds,
+                    retry_after_seconds=_retry_after_seconds(response),
+                )
+                continue
+
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt >= max_attempts:
+                break
+            _sleep_retry_delay(attempt_number=attempt, base_delay_seconds=backoff_seconds)
+
+    if last_error is None:
+        raise ValueError(f"SEC request failed without response: {url}")
+    raise last_error
+
+
 def fetch_company_tickers(session: requests.Session) -> pd.DataFrame:
-    response = session.get(SEC_TICKERS_URL, timeout=30)
-    response.raise_for_status()
+    response = _sec_get_with_retry(session, SEC_TICKERS_URL, timeout=30)
     payload = response.json()
     companies = pd.DataFrame(payload.values())
     companies["ticker"] = companies["ticker"].str.upper()
@@ -110,8 +168,7 @@ def lookup_companies(companies: pd.DataFrame, tickers: list[str]) -> pd.DataFram
 
 
 def fetch_submissions(session: requests.Session, cik: int) -> dict:
-    response = session.get(SEC_SUBMISSIONS_URL.format(cik=cik), timeout=30)
-    response.raise_for_status()
+    response = _sec_get_with_retry(session, SEC_SUBMISSIONS_URL.format(cik=cik), timeout=30)
     return response.json()
 
 
@@ -221,8 +278,7 @@ def download_filing_text(
     filing: FilingMetadata,
     max_chars: int,
 ) -> str:
-    response = session.get(filing.url, timeout=60)
-    response.raise_for_status()
+    response = _sec_get_with_retry(session, filing.url, timeout=60)
     content_type = response.headers.get("Content-Type", "").lower()
     if "pdf" in content_type or filing.primary_document.lower().endswith(".pdf"):
         raise ValueError("pdf filing documents are not supported")

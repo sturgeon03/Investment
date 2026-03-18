@@ -11,6 +11,8 @@ Read `references/principles.md` before planning or implementing any strategy or 
 
 Read `references/roadmap.md` when deciding what to build next.
 
+Read `references/review-followups.md` when external feedback or old notes need to be reconciled with the local workspace.
+
 ## Workflow
 
 1. Treat the existing repo as a research platform, not as a production trading system.
@@ -39,3 +41,4 @@ Read `references/roadmap.md` when deciding what to build next.
 - `references/current-state.md`
 - `references/principles.md`
 - `references/roadmap.md`
+- `references/review-followups.md`

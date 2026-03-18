@@ -1,0 +1,173 @@
+{
+  "config": {
+    "backtest": {
+      "transaction_cost_bps": 10.0
+    },
+    "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_30.yaml",
+    "data": {
+      "benchmark": "SPY",
+      "end": null,
+      "metadata_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30_metadata.csv",
+      "start": "2018-01-01",
+      "tickers": [
+        "AAPL",
+        "ABBV",
+        "AMD",
+        "AMZN",
+        "AVGO",
+        "BAC",
+        "COST",
+        "CRM",
+        "CVX",
+        "GOOGL",
+        "HD",
+        "JNJ",
+        "JPM",
+        "KO",
+        "LLY",
+        "MA",
+        "META",
+        "MRK",
+        "MSFT",
+        "NFLX",
+        "NVDA",
+        "ORCL",
+        "PEP",
+        "PG",
+        "TMO",
+        "TSLA",
+        "UNH",
+        "V",
+        "WMT",
+        "XOM"
+      ],
+      "tickers_file": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_30.txt"
+    },
+    "llm": {
+      "enabled": false,
+      "horizon_bucket": "swing",
+      "signal_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\signals\\llm_scores.generated.csv"
+    },
+    "output": {
+      "artifacts_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price_large_cap_30",
+      "data_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_30"
+    },
+    "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks",
+    "risk": {
+      "allow_fractional_shares": true,
+      "capital_base": 100000.0,
+      "cash_buffer": 0.04,
+      "max_position_weight": 0.12,
+      "min_trade_notional": 250.0
+    },
+    "scoring": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "base_url": "https://api.deepseek.com",
+      "env_file": null,
+      "model": "deepseek-chat",
+      "provider": "heuristic",
+      "temperature": 0.0,
+      "timeout_seconds": 60
+    },
+    "strategy": {
+      "llm_weight": 0.0,
+      "min_history_days": 200,
+      "momentum_20_weight": 0.45,
+      "momentum_60_weight": 0.35,
+      "rebalance": "monthly",
+      "top_n": 8,
+      "trend_filter_mode": "soft",
+      "trend_penalty": 0.35,
+      "volatility_weight": -0.2
+    },
+    "workflow": {
+      "apply_paper_orders": false,
+      "forms": [
+        "10-K",
+        "10-Q",
+        "8-K"
+      ],
+      "limit_per_ticker": 1,
+      "max_chars": 200000,
+      "min_section_chars": 250,
+      "output_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\runs",
+      "pause_seconds": 0.25,
+      "positions_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\paper\\current_positions.csv",
+      "start_date_lookback_days": 180
+    }
+  },
+  "config_file_sha256": "6c6117fdef422ae7c129daee2ff82d9e3a3ef4ee01189d48fe780ba2554ee280",
+  "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_30.yaml",
+  "config_snapshot_sha256": "b4ac5d63326d501bb57a2491f568dc94a58d816d9188e1e1ecd0374cfa021bf7",
+  "experiment_name": "deep_learning_report",
+  "extra": {
+    "batch_size": 128,
+    "embargo_days": 20,
+    "hidden_dim": 32,
+    "label_horizon_days": 20,
+    "latest_market_date": "2026-03-16",
+    "learning_rate": 0.01,
+    "lookback_days": 365,
+    "max_epochs": 250,
+    "min_training_samples": 252,
+    "min_validation_samples": 120,
+    "patience": 25,
+    "ridge_alpha": 8.0,
+    "tree_l2_regularization": 0.0,
+    "tree_learning_rate": 0.05,
+    "tree_max_depth": 3,
+    "tree_max_iter": 200,
+    "tree_min_samples_leaf": 20,
+    "use_llm_feature": false,
+    "validation_window_days": 60,
+    "weight_decay": 0.0001
+  },
+  "generated_at_utc": "2026-03-17T08:32:33.493666+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "233780e17a065c80b82bf86327827d4ae53e6e72",
+    "dirty": true
+  },
+  "inputs": {
+    "llm_signal_path": null,
+    "llm_signal_sha256": null
+  },
+  "output_files": {
+    "baseline_history": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\configured_baseline_history_last_year.csv",
+      "sha256": "e045859c6ec8219af6cfc7cdfeb01877410bc507a5b4513169a09fa25822279c"
+    },
+    "chart": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\deep_learning_values_last_year.svg",
+      "sha256": "174e6345f13f3cbce039e7e2bd66089a7ae17ef0909ccdfc4ef1fc2631d47762"
+    },
+    "mlp_history": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\mlp_walkforward_history_last_year.csv",
+      "sha256": "2bf600689fb84b6c42bd5df51893df97cf61a69daa5aa316c5816ce6863b2acc"
+    },
+    "ridge_history": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\ridge_walkforward_history_last_year.csv",
+      "sha256": "bb545cf88ecd3b684544a78352fc6ad502e161cc1949db08e83e34c54a821691"
+    },
+    "summary": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\deep_learning_summary_last_year.csv",
+      "sha256": "f0efb8e3c5bc75d85b1501b3bcf61998a4722d05b4a53d6acea77337ba016e83"
+    },
+    "tree_history": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\tree_walkforward_history_last_year.csv",
+      "sha256": "7af65ea13c2444da48de980dc447bde6fd4e6332ca0500d66e907280456b3999"
+    },
+    "values": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_30_last_year_v2\\deep_learning_values_last_year.csv",
+      "sha256": "3af9f5eeb6724ae1405c01d6bd741e9b53f659ca7a07e8cdf20d5f8a19a34f8a"
+    }
+  },
+  "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks"
+}

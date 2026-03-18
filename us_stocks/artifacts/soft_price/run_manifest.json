@@ -1,0 +1,139 @@
+{
+  "config": {
+    "backtest": {
+      "transaction_cost_bps": 10.0
+    },
+    "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price.yaml",
+    "data": {
+      "benchmark": "SPY",
+      "end": null,
+      "start": "2018-01-01",
+      "tickers": [
+        "AAPL",
+        "AMZN",
+        "AVGO",
+        "COST",
+        "GOOGL",
+        "JPM",
+        "META",
+        "MSFT",
+        "NVDA",
+        "XOM"
+      ]
+    },
+    "llm": {
+      "enabled": false,
+      "horizon_bucket": "swing",
+      "signal_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\signals\\llm_scores.generated.csv"
+    },
+    "output": {
+      "artifacts_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price",
+      "data_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data"
+    },
+    "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks",
+    "risk": {
+      "allow_fractional_shares": true,
+      "capital_base": 100000.0,
+      "cash_buffer": 0.05,
+      "max_position_weight": 0.25,
+      "min_trade_notional": 250.0
+    },
+    "scoring": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "base_url": "https://api.deepseek.com",
+      "env_file": null,
+      "model": "deepseek-chat",
+      "provider": "heuristic",
+      "temperature": 0.0,
+      "timeout_seconds": 60
+    },
+    "strategy": {
+      "llm_weight": 0.0,
+      "min_history_days": 200,
+      "momentum_20_weight": 0.45,
+      "momentum_60_weight": 0.35,
+      "rebalance": "monthly",
+      "top_n": 4,
+      "trend_filter_mode": "soft",
+      "trend_penalty": 0.35,
+      "volatility_weight": -0.2
+    },
+    "workflow": {
+      "apply_paper_orders": false,
+      "forms": [
+        "10-K",
+        "10-Q",
+        "8-K"
+      ],
+      "limit_per_ticker": 2,
+      "max_chars": 200000,
+      "min_section_chars": 250,
+      "output_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\runs",
+      "pause_seconds": 0.25,
+      "positions_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\paper\\current_positions.csv",
+      "start_date_lookback_days": 180
+    }
+  },
+  "config_file_sha256": "afafc0a59ca2cf1f28834e64b8c500fcc90ec507765ce0f9147c5704fe6b319d",
+  "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price.yaml",
+  "config_snapshot_sha256": "91f688279ad40305374174f6010bc0c73541b79ac1b746ecdc20b72e5e1505f7",
+  "experiment_name": "research_pipeline",
+  "extra": {
+    "current_positions_path": null,
+    "current_positions_sha256": null,
+    "portfolio_date": null
+  },
+  "generated_at_utc": "2026-03-17T08:21:34.281905+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "233780e17a065c80b82bf86327827d4ae53e6e72",
+    "dirty": true
+  },
+  "inputs": {
+    "llm_signal_path": null,
+    "llm_signal_sha256": null
+  },
+  "output_files": {
+    "benchmark": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data\\raw\\benchmark.csv",
+      "sha256": "8d01c85ed17cc4761f518ba182cc9842da5bea1c5b773bdd2d777c01a3db8177"
+    },
+    "equity_curve": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price\\equity_curve.csv",
+      "sha256": "6fbea8e56cebe65e47c6c95b85a70250d8c3e5379880b873dfefdeaf7bfb42d5"
+    },
+    "features": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data\\processed\\features.csv",
+      "sha256": "9f7a43470ffb36b16471dfc5f4c92462bf42fc26cd67f4f796f55b3af7d6d7ad"
+    },
+    "prices": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data\\raw\\prices.csv",
+      "sha256": "d76265e7f518a7fe11b6954d76fdaa6b335d1dc06456f58b292159195588871f"
+    },
+    "ranking_history": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price\\ranking_history.csv",
+      "sha256": "f21c1aec35425ce7dab53d2f4092b6bfce614e2f5cafe659afabbe8cb08da82a"
+    },
+    "summary": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price\\summary.csv",
+      "sha256": "d5640f32aa4482ad62c2604bace93be720bc7f0229abc7ca9189a5ef8d445468"
+    },
+    "target_portfolio": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price\\target_portfolio.csv",
+      "sha256": "c77fd06867442cac452207dd673cb1a7bf9021c97e2b00cf2bad65217cecfa1d"
+    },
+    "target_weights": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\soft_price\\target_weights.csv",
+      "sha256": "42f1112c629579a7f3598e2acdeee141dcb0ea6fcb2cbe3da9e2dd3ddeb233c1"
+    }
+  },
+  "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks"
+}

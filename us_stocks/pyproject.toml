@@ -14,6 +14,7 @@ dependencies = [
     "pandas>=2.2",
     "PyYAML>=6.0",
     "requests>=2.32",
+    "scikit-learn>=1.5,<1.8",
     "yfinance>=0.2.54",
 ]
 
@@ -23,10 +24,12 @@ us-invest-ai-score-docs = "us_invest_ai.score_documents:main"
 us-invest-ai-compare = "us_invest_ai.compare_configs:main"
 us-invest-ai-fetch-sec = "us_invest_ai.fetch_sec_filings:main"
 us-invest-ai-extract-sec = "us_invest_ai.extract_sec_sections:main"
+us-invest-ai-build-universe = "us_invest_ai.build_universe_snapshots:main"
 us-invest-ai-daily = "us_invest_ai.daily_workflow:main"
 us-invest-ai-report = "us_invest_ai.performance_report:main"
 us-invest-ai-ml-report = "us_invest_ai.supervised_ml_report:main"
 us-invest-ai-dl-report = "us_invest_ai.deep_learning_report:main"
+us-invest-ai-stability-report = "us_invest_ai.stability_report:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

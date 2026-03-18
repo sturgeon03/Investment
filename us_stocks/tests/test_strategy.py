@@ -108,6 +108,34 @@ class StrategyTests(unittest.TestCase):
 
         self.assertEqual(weights.loc[pd.Timestamp("2025-01-31"), "AAA"], 1.0)
 
+    def test_generate_target_weights_excludes_ineligible_universe_rows(self) -> None:
+        features = _build_features().copy()
+        features["eligible_universe"] = True
+        features.loc[
+            (features["date"] == pd.Timestamp("2025-01-31")) & (features["ticker"] == "AAA"),
+            "eligible_universe",
+        ] = False
+        config = StrategyConfig(
+            rebalance="monthly",
+            top_n=1,
+            min_history_days=1,
+            trend_filter_mode="hard",
+            trend_penalty=0.35,
+            momentum_20_weight=0.45,
+            momentum_60_weight=0.35,
+            volatility_weight=-0.20,
+            llm_weight=0.25,
+        )
+
+        weights, ranking_history = generate_target_weights(features, config)
+
+        self.assertEqual(weights.loc[pd.Timestamp("2025-01-31"), "AAA"], 0.0)
+        self.assertEqual(weights.loc[pd.Timestamp("2025-01-31"), "BBB"], 1.0)
+        selected = ranking_history.loc[
+            (ranking_history["date"] == pd.Timestamp("2025-01-31")) & ranking_history["selected"]
+        ]
+        self.assertEqual(selected["ticker"].iloc[0], "BBB")
+
 
 if __name__ == "__main__":
     unittest.main()

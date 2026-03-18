@@ -1,0 +1,112 @@
+{
+  "benchmark_file": {
+    "exists": true,
+    "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\benchmark.csv",
+    "sha256": "d057df8afc54ea497b1190404e5b6fe603043d47996e930225f3b08904ca25c7"
+  },
+  "benchmark_summary": {
+    "end_date": "2026-03-17",
+    "rows": 2062,
+    "start_date": "2018-01-02",
+    "ticker_count": 1
+  },
+  "generated_at_utc": "2026-03-18T06:30:59.714964+00:00",
+  "inputs": {
+    "metadata_file": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60_metadata.csv",
+      "sha256": "13919401f73b70a6ac7441aa26002a5e4fe1214cd218e4960509ade85d788e61"
+    },
+    "tickers_file": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\liquid_large_cap_60.txt",
+      "sha256": "e45b98c179e338b9c8f9b2e7798f75a021aff1b7d9a3442547c83e37bb7bb898"
+    },
+    "universe_snapshots_file": {
+      "exists": true,
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\universes\\generated\\liquid_large_cap_60_dynamic_snapshots.csv",
+      "sha256": "b796c41a685fcd7a1b76f44422a8bc933345c39f215563c24f9eaf7306369d31"
+    }
+  },
+  "metadata_rows": 60,
+  "prices_file": {
+    "exists": true,
+    "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\prices.csv",
+    "sha256": "a2b82f9c6c17f27f612c1df8688e1ac6bb64f47abfff52a8f11bac0f1c731a7b"
+  },
+  "prices_summary": {
+    "end_date": "2026-03-17",
+    "rows": 123720,
+    "start_date": "2018-01-02",
+    "ticker_count": 60
+  },
+  "query": {
+    "benchmark": "SPY",
+    "end": null,
+    "start": "2018-01-01",
+    "tickers": [
+      "AAPL",
+      "ABBV",
+      "ABT",
+      "ACN",
+      "ADBE",
+      "AMD",
+      "AMGN",
+      "AMZN",
+      "AVGO",
+      "AXP",
+      "BA",
+      "BKNG",
+      "C",
+      "CAT",
+      "CMCSA",
+      "COP",
+      "COST",
+      "CRM",
+      "CSCO",
+      "CVX",
+      "DHR",
+      "DIS",
+      "GE",
+      "GILD",
+      "GOOGL",
+      "GS",
+      "HD",
+      "IBM",
+      "INTC",
+      "INTU",
+      "JNJ",
+      "JPM",
+      "KO",
+      "LIN",
+      "LLY",
+      "LOW",
+      "MA",
+      "MCD",
+      "META",
+      "MMM",
+      "MRK",
+      "MSFT",
+      "NEE",
+      "NFLX",
+      "NVDA",
+      "ORCL",
+      "PEP",
+      "PFE",
+      "PG",
+      "PM",
+      "QCOM",
+      "RTX",
+      "SBUX",
+      "SCHW",
+      "T",
+      "TMO",
+      "TXN",
+      "UNH",
+      "UNP",
+      "XOM"
+    ]
+  },
+  "snapshot_rows": 2730,
+  "source": "cache"
+}
