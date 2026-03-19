@@ -3,14 +3,20 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
-from us_invest_ai.backtest import build_summary, run_backtest
+from invest_ai_core.artifacts import (
+    DataFrameArtifact,
+    ensure_output_dir,
+    write_dataframe_artifacts,
+    write_manifest_with_outputs,
+)
+from invest_ai_core.evaluation import build_backtest_evaluation_row
+from us_invest_ai.backtest import run_backtest
 from us_invest_ai.config import load_config
 from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.dl_strategy import MLPModelConfig, generate_mlp_target_weights
-from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
+from us_invest_ai.experiment_manifest import build_run_manifest
 from us_invest_ai.features import build_features
 from us_invest_ai.hybrid_sequence_strategy import (
     HybridSequenceModelConfig,
@@ -293,73 +299,6 @@ def _build_evaluation_windows(
         raise ValueError("Unable to build any evaluation windows from the available trading dates.")
     return windows
 
-
-def _build_value_curve(
-    daily_returns: pd.Series,
-    benchmark_returns: pd.Series | None,
-    initial_capital: float,
-) -> pd.DataFrame:
-    strategy_growth = (1.0 + daily_returns).cumprod()
-    strategy_value = initial_capital * (strategy_growth / strategy_growth.iloc[0])
-    frame = pd.DataFrame({"date": strategy_value.index, "strategy_value": strategy_value.to_numpy()})
-    if benchmark_returns is not None:
-        benchmark_growth = (1.0 + benchmark_returns).cumprod()
-        benchmark_value = initial_capital * (benchmark_growth / benchmark_growth.iloc[0])
-        frame["benchmark_value"] = benchmark_value.reindex(strategy_value.index).to_numpy()
-    return frame
-
-
-def _build_window_row(
-    model_name: str,
-    window_label: str,
-    eval_start: pd.Timestamp,
-    eval_end: pd.Timestamp,
-    result,
-    history: pd.DataFrame,
-    initial_capital: float,
-) -> pd.DataFrame:
-    returns = result.daily_returns.loc[(result.daily_returns.index >= eval_start) & (result.daily_returns.index <= eval_end)]
-    turnover = result.turnover.reindex(returns.index)
-    benchmark_returns = (
-        result.benchmark_returns.reindex(returns.index)
-        if result.benchmark_returns is not None
-        else None
-    )
-    summary = build_summary(returns, turnover, benchmark_returns)
-    curve = _build_value_curve(returns, benchmark_returns, initial_capital)
-    row = summary.copy()
-    row.insert(0, "model_name", model_name)
-    row.insert(1, "window_label", window_label)
-    row["eval_start"] = eval_start.date().isoformat()
-    row["eval_end"] = eval_end.date().isoformat()
-    row["starting_capital"] = initial_capital
-    row["ending_capital"] = float(curve["strategy_value"].iloc[-1])
-    row["profit_dollars"] = float(curve["strategy_value"].iloc[-1] - initial_capital)
-
-    history_slice = history.loc[
-        (pd.to_datetime(history["date"]).dt.normalize() >= eval_start)
-        & (pd.to_datetime(history["date"]).dt.normalize() <= eval_end)
-    ].copy()
-    selected = history_slice.loc[history_slice.get("selected", False)] if not history_slice.empty else pd.DataFrame()
-    row["rebalance_count"] = int(history_slice["date"].nunique()) if not history_slice.empty else 0
-    row["avg_train_sample_count"] = (
-        float(selected["train_sample_count"].mean())
-        if not selected.empty and "train_sample_count" in selected.columns
-        else np.nan
-    )
-    row["avg_validation_sample_count"] = (
-        float(selected["validation_sample_count"].mean())
-        if not selected.empty and "validation_sample_count" in selected.columns
-        else np.nan
-    )
-    row["avg_validation_mse"] = (
-        float(selected["validation_mse"].mean())
-        if not selected.empty and "validation_mse" in selected.columns
-        else np.nan
-    )
-    return row
-
-
 def main() -> None:
     args = _parse_args()
     config = load_config(args.config)
@@ -609,15 +548,18 @@ def main() -> None:
     window_rows: list[pd.DataFrame] = []
     for window in windows:
         for model_name, result, history in model_runs:
+            eval_start = pd.Timestamp(window["eval_start"]).normalize()
+            eval_end = pd.Timestamp(window["eval_end"]).normalize()
             window_rows.append(
-                _build_window_row(
+                build_backtest_evaluation_row(
                     model_name=model_name,
-                    window_label=str(window["window_label"]),
-                    eval_start=pd.Timestamp(window["eval_start"]),
-                    eval_end=pd.Timestamp(window["eval_end"]),
                     result=result,
+                    window_label=str(window["window_label"]),
+                    eval_start=eval_start,
+                    eval_end=eval_end,
                     history=history,
                     initial_capital=args.initial_capital,
+                    include_rebalance_count=True,
                 )
             )
 
@@ -674,16 +616,19 @@ def main() -> None:
     chart_frame = chart_frame.reindex(columns=ordered_chart_columns)
     chart_frame = chart_frame.rename(columns={column: f"{column}_value" for column in chart_frame.columns if column != "date"})
 
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = output_dir / "stability_window_summary.csv"
-    aggregate_path = output_dir / "stability_model_aggregate.csv"
-    values_path = output_dir / "stability_window_end_values.csv"
+    output_dir = ensure_output_dir(args.output_dir)
+    output_files = write_dataframe_artifacts(
+        output_dir,
+        [
+            DataFrameArtifact("window_summary", window_summary, "stability_window_summary.csv"),
+            DataFrameArtifact("aggregate", aggregate, "stability_model_aggregate.csv"),
+            DataFrameArtifact("window_end_values", chart_frame, "stability_window_end_values.csv"),
+        ],
+    )
+    summary_path = output_files["window_summary"]
+    aggregate_path = output_files["aggregate"]
+    values_path = output_files["window_end_values"]
     chart_path = output_dir / "stability_window_end_values.svg"
-
-    window_summary.to_csv(summary_path, index=False)
-    aggregate.to_csv(aggregate_path, index=False)
-    chart_frame.to_csv(values_path, index=False)
     _build_svg(chart_frame, benchmark_name="configured_baseline_value", output_path=chart_path)
 
     manifest = build_run_manifest(
@@ -731,17 +676,16 @@ def main() -> None:
             "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
         },
     )
-    save_manifest(
-        output_dir / "stability_manifest.json",
-        attach_output_files(
-            manifest,
-            {
-                "window_summary": summary_path,
-                "aggregate": aggregate_path,
-                "window_end_values": values_path,
-                "chart": chart_path,
-            },
-        ),
+    write_manifest_with_outputs(
+        output_dir,
+        "stability_manifest.json",
+        manifest,
+        {
+            "window_summary": summary_path,
+            "aggregate": aggregate_path,
+            "window_end_values": values_path,
+            "chart": chart_path,
+        },
     )
 
     print(window_summary.to_string(index=False))

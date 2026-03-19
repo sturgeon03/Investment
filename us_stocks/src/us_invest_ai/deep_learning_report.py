@@ -3,14 +3,24 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
-from us_invest_ai.backtest import build_summary, run_backtest
+from invest_ai_core.artifacts import (
+    DataFrameArtifact,
+    ensure_output_dir,
+    write_dataframe_artifacts,
+    write_manifest_with_outputs,
+)
+from invest_ai_core.evaluation import evaluate_backtest_window
+from invest_ai_core.reporting import (
+    build_evaluation_row as _build_summary_row,
+    build_value_curve as _build_value_curve,
+)
+from us_invest_ai.backtest import run_backtest
 from us_invest_ai.config import load_config
 from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.dl_strategy import MLPModelConfig, generate_mlp_target_weights
-from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
+from us_invest_ai.experiment_manifest import build_run_manifest
 from us_invest_ai.hybrid_sequence_strategy import (
     HybridSequenceModelConfig,
     generate_hybrid_sequence_target_weights,
@@ -272,57 +282,6 @@ def _load_market_data(config) -> tuple[pd.DataFrame, pd.DataFrame]:
     )
     return prices, benchmark_prices
 
-
-def _build_value_curve(
-    daily_returns: pd.Series,
-    benchmark_returns: pd.Series | None,
-    initial_capital: float,
-) -> pd.DataFrame:
-    strategy_growth = (1.0 + daily_returns).cumprod()
-    strategy_value = initial_capital * (strategy_growth / strategy_growth.iloc[0])
-    frame = pd.DataFrame({"date": strategy_value.index, "strategy_value": strategy_value.to_numpy()})
-    if benchmark_returns is not None:
-        benchmark_growth = (1.0 + benchmark_returns).cumprod()
-        benchmark_value = initial_capital * (benchmark_growth / benchmark_growth.iloc[0])
-        frame["benchmark_value"] = benchmark_value.reindex(strategy_value.index).to_numpy()
-    return frame
-
-
-def _build_summary_row(
-    model_name: str,
-    summary: pd.DataFrame,
-    history: pd.DataFrame,
-    curve: pd.DataFrame,
-    eval_start: pd.Timestamp,
-    eval_end: pd.Timestamp,
-    initial_capital: float,
-) -> pd.DataFrame:
-    row = summary.copy()
-    row.insert(0, "model_name", model_name)
-    row["eval_start"] = eval_start.date().isoformat()
-    row["eval_end"] = eval_end.date().isoformat()
-    row["starting_capital"] = initial_capital
-    row["ending_capital"] = float(curve["strategy_value"].iloc[-1])
-    row["profit_dollars"] = float(curve["strategy_value"].iloc[-1] - initial_capital)
-    selected = history.loc[history["selected"]] if "selected" in history.columns else pd.DataFrame()
-    row["avg_train_sample_count"] = (
-        float(selected["train_sample_count"].mean())
-        if not selected.empty and "train_sample_count" in selected.columns
-        else np.nan
-    )
-    row["avg_validation_sample_count"] = (
-        float(selected["validation_sample_count"].mean())
-        if not selected.empty and "validation_sample_count" in selected.columns
-        else np.nan
-    )
-    row["avg_validation_mse"] = (
-        float(selected["validation_mse"].mean())
-        if not selected.empty and "validation_mse" in selected.columns
-        else np.nan
-    )
-    return row
-
-
 def main() -> None:
     args = _parse_args()
     config = load_config(args.config)
@@ -573,63 +532,36 @@ def main() -> None:
     if baseline_result.benchmark_returns is not None:
         benchmark_returns = baseline_result.benchmark_returns.reindex(transformer_returns.index)
 
-    baseline_summary = build_summary(
-        baseline_returns,
-        baseline_result.turnover.reindex(baseline_returns.index),
-        baseline_result.benchmark_returns.reindex(baseline_returns.index)
-        if baseline_result.benchmark_returns is not None
-        else None,
-    )
-    ridge_summary = build_summary(
-        ridge_returns,
-        ridge_result.turnover.reindex(ridge_returns.index),
-        ridge_result.benchmark_returns.reindex(ridge_returns.index) if ridge_result.benchmark_returns is not None else None,
-    )
-    tree_summary = build_summary(
-        tree_returns,
-        tree_result.turnover.reindex(tree_returns.index),
-        tree_result.benchmark_returns.reindex(tree_returns.index) if tree_result.benchmark_returns is not None else None,
-    )
-    mlp_summary = build_summary(
-        mlp_returns,
-        mlp_result.turnover.reindex(mlp_returns.index),
-        mlp_result.benchmark_returns.reindex(mlp_returns.index) if mlp_result.benchmark_returns is not None else None,
-    )
-    tcn_summary = build_summary(
-        tcn_returns,
-        tcn_result.turnover.reindex(tcn_returns.index),
-        tcn_result.benchmark_returns.reindex(tcn_returns.index) if tcn_result.benchmark_returns is not None else None,
-    )
-    hybrid_summary = build_summary(
-        hybrid_returns,
-        hybrid_result.turnover.reindex(hybrid_returns.index),
-        hybrid_result.benchmark_returns.reindex(hybrid_returns.index)
-        if hybrid_result.benchmark_returns is not None
-        else None,
-    )
-    lstm_summary = build_summary(
-        lstm_returns,
-        lstm_result.turnover.reindex(lstm_returns.index),
-        lstm_result.benchmark_returns.reindex(lstm_returns.index)
-        if lstm_result.benchmark_returns is not None
-        else None,
-    )
-    transformer_summary = build_summary(
-        transformer_returns,
-        transformer_result.turnover.reindex(transformer_returns.index),
-        transformer_result.benchmark_returns.reindex(transformer_returns.index)
-        if transformer_result.benchmark_returns is not None
-        else None,
+    baseline_evaluation = evaluate_backtest_window(baseline_result, eval_start_actual, initial_capital=args.initial_capital)
+    ridge_evaluation = evaluate_backtest_window(ridge_result, eval_start_actual, initial_capital=args.initial_capital)
+    tree_evaluation = evaluate_backtest_window(tree_result, eval_start_actual, initial_capital=args.initial_capital)
+    mlp_evaluation = evaluate_backtest_window(mlp_result, eval_start_actual, initial_capital=args.initial_capital)
+    tcn_evaluation = evaluate_backtest_window(tcn_result, eval_start_actual, initial_capital=args.initial_capital)
+    hybrid_evaluation = evaluate_backtest_window(hybrid_result, eval_start_actual, initial_capital=args.initial_capital)
+    lstm_evaluation = evaluate_backtest_window(lstm_result, eval_start_actual, initial_capital=args.initial_capital)
+    transformer_evaluation = evaluate_backtest_window(
+        transformer_result,
+        eval_start_actual,
+        initial_capital=args.initial_capital,
     )
 
-    baseline_curve = _build_value_curve(baseline_returns, benchmark_returns, args.initial_capital)
-    ridge_curve = _build_value_curve(ridge_returns, benchmark_returns, args.initial_capital)
-    tree_curve = _build_value_curve(tree_returns, benchmark_returns, args.initial_capital)
-    mlp_curve = _build_value_curve(mlp_returns, benchmark_returns, args.initial_capital)
-    tcn_curve = _build_value_curve(tcn_returns, benchmark_returns, args.initial_capital)
-    hybrid_curve = _build_value_curve(hybrid_returns, benchmark_returns, args.initial_capital)
-    lstm_curve = _build_value_curve(lstm_returns, benchmark_returns, args.initial_capital)
-    transformer_curve = _build_value_curve(transformer_returns, benchmark_returns, args.initial_capital)
+    baseline_summary = baseline_evaluation.summary
+    ridge_summary = ridge_evaluation.summary
+    tree_summary = tree_evaluation.summary
+    mlp_summary = mlp_evaluation.summary
+    tcn_summary = tcn_evaluation.summary
+    hybrid_summary = hybrid_evaluation.summary
+    lstm_summary = lstm_evaluation.summary
+    transformer_summary = transformer_evaluation.summary
+
+    baseline_curve = baseline_evaluation.curve
+    ridge_curve = ridge_evaluation.curve
+    tree_curve = tree_evaluation.curve
+    mlp_curve = mlp_evaluation.curve
+    tcn_curve = tcn_evaluation.curve
+    hybrid_curve = hybrid_evaluation.curve
+    lstm_curve = lstm_evaluation.curve
+    transformer_curve = transformer_evaluation.curve
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -711,9 +643,6 @@ def main() -> None:
         ],
         ignore_index=True,
     ).sort_values(["ending_capital", "sharpe"], ascending=[False, False]).reset_index(drop=True)
-    summary_path = output_dir / "deep_learning_summary_last_year.csv"
-    summary_frame.to_csv(summary_path, index=False)
-
     values_frame = pd.DataFrame({"date": tcn_curve["date"]})
     values_frame["configured_baseline_value"] = baseline_curve["strategy_value"].to_numpy()
     values_frame["ridge_walkforward_value"] = ridge_curve["strategy_value"].to_numpy()
@@ -725,51 +654,60 @@ def main() -> None:
     values_frame["transformer_walkforward_value"] = transformer_curve["strategy_value"].to_numpy()
     if "benchmark_value" in tcn_curve.columns:
         values_frame["benchmark_value"] = tcn_curve["benchmark_value"].to_numpy()
-    values_path = output_dir / "deep_learning_values_last_year.csv"
-    values_frame.to_csv(values_path, index=False)
+    output_dir = ensure_output_dir(output_dir)
+    output_files = write_dataframe_artifacts(
+        output_dir,
+        [
+            DataFrameArtifact("summary", summary_frame, "deep_learning_summary_last_year.csv"),
+            DataFrameArtifact("values", values_frame, "deep_learning_values_last_year.csv"),
+            DataFrameArtifact(
+                "baseline_history",
+                baseline_history.loc[baseline_history["date"] >= eval_start_actual],
+                "configured_baseline_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "ridge_history",
+                ridge_history.loc[ridge_history["date"] >= eval_start_actual],
+                "ridge_walkforward_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "tree_history",
+                tree_history.loc[tree_history["date"] >= eval_start_actual],
+                "tree_walkforward_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "mlp_history",
+                mlp_history.loc[mlp_history["date"] >= eval_start_actual],
+                "mlp_walkforward_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "tcn_history",
+                tcn_history.loc[tcn_history["date"] >= eval_start_actual],
+                "tcn_walkforward_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "hybrid_history",
+                hybrid_history.loc[hybrid_history["date"] >= eval_start_actual],
+                "hybrid_sequence_walkforward_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "lstm_history",
+                lstm_history.loc[lstm_history["date"] >= eval_start_actual],
+                "lstm_walkforward_history_last_year.csv",
+            ),
+            DataFrameArtifact(
+                "transformer_history",
+                transformer_history.loc[transformer_history["date"] >= eval_start_actual],
+                "transformer_walkforward_history_last_year.csv",
+            ),
+        ],
+    )
+    summary_path = output_files["summary"]
+    values_path = output_files["values"]
 
     chart_path = output_dir / "deep_learning_values_last_year.svg"
     benchmark_name = "benchmark_value" if "benchmark_value" in values_frame.columns else "configured_baseline_value"
     _build_svg(values_frame, benchmark_name=benchmark_name, output_path=chart_path)
-
-    baseline_history.loc[baseline_history["date"] >= eval_start_actual].to_csv(
-        output_dir / "configured_baseline_history_last_year.csv",
-        index=False,
-    )
-    ridge_history.loc[ridge_history["date"] >= eval_start_actual].to_csv(
-        output_dir / "ridge_walkforward_history_last_year.csv",
-        index=False,
-    )
-    tree_history_path = output_dir / "tree_walkforward_history_last_year.csv"
-    tree_history.loc[tree_history["date"] >= eval_start_actual].to_csv(
-        tree_history_path,
-        index=False,
-    )
-    mlp_history_path = output_dir / "mlp_walkforward_history_last_year.csv"
-    mlp_history.loc[mlp_history["date"] >= eval_start_actual].to_csv(
-        mlp_history_path,
-        index=False,
-    )
-    tcn_history_path = output_dir / "tcn_walkforward_history_last_year.csv"
-    tcn_history.loc[tcn_history["date"] >= eval_start_actual].to_csv(
-        tcn_history_path,
-        index=False,
-    )
-    hybrid_history_path = output_dir / "hybrid_sequence_walkforward_history_last_year.csv"
-    hybrid_history.loc[hybrid_history["date"] >= eval_start_actual].to_csv(
-        hybrid_history_path,
-        index=False,
-    )
-    lstm_history_path = output_dir / "lstm_walkforward_history_last_year.csv"
-    lstm_history.loc[lstm_history["date"] >= eval_start_actual].to_csv(
-        lstm_history_path,
-        index=False,
-    )
-    transformer_history_path = output_dir / "transformer_walkforward_history_last_year.csv"
-    transformer_history.loc[transformer_history["date"] >= eval_start_actual].to_csv(
-        transformer_history_path,
-        index=False,
-    )
     manifest = build_run_manifest(
         config,
         experiment_name="deep_learning_report",
@@ -813,24 +751,14 @@ def main() -> None:
             "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
         },
     )
-    save_manifest(
-        output_dir / "report_manifest.json",
-        attach_output_files(
-            manifest,
-            {
-                "summary": summary_path,
-                "values": values_path,
-                "chart": chart_path,
-                "baseline_history": output_dir / "configured_baseline_history_last_year.csv",
-                "ridge_history": output_dir / "ridge_walkforward_history_last_year.csv",
-                "tree_history": tree_history_path,
-                "mlp_history": mlp_history_path,
-                "tcn_history": tcn_history_path,
-                "hybrid_history": hybrid_history_path,
-                "lstm_history": lstm_history_path,
-                "transformer_history": transformer_history_path,
-            },
-        ),
+    write_manifest_with_outputs(
+        output_dir,
+        "report_manifest.json",
+        manifest,
+        {
+            **output_files,
+            "chart": chart_path,
+        },
     )
 
     print(summary_frame.to_string(index=False))

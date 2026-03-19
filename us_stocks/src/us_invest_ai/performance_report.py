@@ -7,10 +7,21 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from invest_ai_core.artifacts import (
+    DataFrameArtifact,
+    ensure_output_dir,
+    write_dataframe_artifacts,
+    write_manifest_with_outputs,
+)
+from invest_ai_core.reporting import (
+    build_svg_chart,
+    build_value_curve as _build_value_curve,
+    compute_signal_metrics,
+)
 from us_invest_ai.backtest import build_summary, run_backtest
 from us_invest_ai.config import DataConfig, EligibilityConfig, load_config
 from us_invest_ai.data import prepare_market_data_bundle
-from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
+from us_invest_ai.experiment_manifest import build_run_manifest
 from us_invest_ai.features import build_features
 from us_invest_ai.signals import load_llm_scores
 from us_invest_ai.strategy import generate_target_weights
@@ -23,7 +34,6 @@ DEFAULT_CONFIGS = [
     "us_stocks/config/with_llm_swing.yaml",
     "us_stocks/config/with_llm_long.yaml",
 ]
-SERIES_COLORS = ["#1d4ed8", "#0f766e", "#7c3aed", "#db2777", "#b45309", "#475569"]
 
 
 def _parse_args() -> argparse.Namespace:
@@ -77,13 +87,7 @@ def _slice_ranking_history(ranking_history: pd.DataFrame, eval_start: pd.Timesta
 
 
 def _signal_metrics(ranking_history: pd.DataFrame) -> tuple[float, float]:
-    if ranking_history.empty or "llm_score" not in ranking_history.columns:
-        return 0.0, 0.0
-
-    llm_values = ranking_history["llm_score"].fillna(0.0).astype(float)
-    signal_coverage = float((llm_values.abs() > 0).mean()) if len(llm_values) else 0.0
-    avg_llm_abs_score = float(llm_values.abs().mean()) if len(llm_values) else 0.0
-    return signal_coverage, avg_llm_abs_score
+    return compute_signal_metrics(ranking_history)
 
 
 def _changed_rebalance_count(base_history: pd.DataFrame, candidate_history: pd.DataFrame) -> int:
@@ -115,110 +119,13 @@ def _changed_rebalance_count(base_history: pd.DataFrame, candidate_history: pd.D
     )
 
 
-def _build_value_curve(
-    daily_returns: pd.Series,
-    benchmark_returns: pd.Series | None,
-    initial_capital: float,
-) -> pd.DataFrame:
-    strategy_growth = (1.0 + daily_returns).cumprod()
-    strategy_value = initial_capital * (strategy_growth / strategy_growth.iloc[0])
-    frame = pd.DataFrame({"date": strategy_value.index, "strategy_value": strategy_value.to_numpy()})
-    if benchmark_returns is not None:
-        benchmark_growth = (1.0 + benchmark_returns).cumprod()
-        benchmark_value = initial_capital * (benchmark_growth / benchmark_growth.iloc[0])
-        frame["benchmark_value"] = benchmark_value.reindex(strategy_value.index).to_numpy()
-    return frame
-
-
-def _format_currency(value: float) -> str:
-    return f"${value:,.0f}"
-
-
 def _build_svg(curves: pd.DataFrame, benchmark_name: str, output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    width = 1200
-    height = 720
-    left = 90
-    right = 220
-    top = 60
-    bottom = 80
-    plot_width = width - left - right
-    plot_height = height - top - bottom
-
-    date_values = pd.to_datetime(curves["date"])
-    x_values = (date_values - date_values.min()).dt.days.astype(float)
-    x_range = max(float(x_values.max()), 1.0)
-
-    numeric_columns = [column for column in curves.columns if column != "date"]
-    y_min = float(curves[numeric_columns].min().min())
-    y_max = float(curves[numeric_columns].max().max())
-    if y_max <= y_min:
-        y_max = y_min + 1.0
-    y_padding = max((y_max - y_min) * 0.08, 1.0)
-    y_min -= y_padding
-    y_max += y_padding
-
-    def project_x(value: float) -> float:
-        return left + (value / x_range) * plot_width
-
-    def project_y(value: float) -> float:
-        return top + (1.0 - (value - y_min) / (y_max - y_min)) * plot_height
-
-    series_markup: list[str] = []
-    legend_markup: list[str] = []
-    for index, column in enumerate(numeric_columns):
-        points = " ".join(
-            f"{project_x(float(x)):.2f},{project_y(float(y)):.2f}"
-            for x, y in zip(x_values, curves[column], strict=True)
-        )
-        color = SERIES_COLORS[index % len(SERIES_COLORS)]
-        stroke_width = 3 if column == benchmark_name else 2.5
-        series_markup.append(
-            f'<polyline fill="none" stroke="{color}" stroke-width="{stroke_width}" points="{points}" />'
-        )
-        legend_y = top + 24 + index * 28
-        label = column.replace("_value", "")
-        legend_markup.append(
-            f'<line x1="{width - right + 20}" y1="{legend_y}" x2="{width - right + 52}" y2="{legend_y}" '
-            f'stroke="{color}" stroke-width="{stroke_width}" />'
-            f'<text x="{width - right + 62}" y="{legend_y + 5}" font-size="16" fill="#0f172a">{label}</text>'
-        )
-
-    y_ticks = np.linspace(y_min, y_max, 5)
-    y_axis_markup = []
-    for value in y_ticks:
-        y = project_y(float(value))
-        y_axis_markup.append(
-            f'<line x1="{left}" y1="{y:.2f}" x2="{left + plot_width}" y2="{y:.2f}" stroke="#e2e8f0" stroke-width="1" />'
-            f'<text x="{left - 12}" y="{y + 5:.2f}" font-size="14" text-anchor="end" fill="#475569">{_format_currency(float(value))}</text>'
-        )
-
-    x_labels = [
-        (date_values.min(), date_values.min().strftime("%Y-%m-%d")),
-        (date_values.iloc[len(date_values) // 2], date_values.iloc[len(date_values) // 2].strftime("%Y-%m-%d")),
-        (date_values.max(), date_values.max().strftime("%Y-%m-%d")),
-    ]
-    x_axis_markup = []
-    for date_value, label in x_labels:
-        offset = float((date_value - date_values.min()).days)
-        x = project_x(offset)
-        x_axis_markup.append(
-            f'<line x1="{x:.2f}" y1="{top}" x2="{x:.2f}" y2="{top + plot_height}" stroke="#f1f5f9" stroke-width="1" />'
-            f'<text x="{x:.2f}" y="{top + plot_height + 28}" font-size="14" text-anchor="middle" fill="#475569">{label}</text>'
-        )
-
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-<rect width="{width}" height="{height}" fill="#f8fafc" />
-<text x="{left}" y="32" font-size="28" font-family="Segoe UI, Arial, sans-serif" fill="#0f172a">US Stocks Strategy Value - Last {len(curves)} Trading Days</text>
-<text x="{left}" y="54" font-size="15" font-family="Segoe UI, Arial, sans-serif" fill="#475569">Initial capital assumed: {_format_currency(curves[numeric_columns[0]].iloc[0])}</text>
-<rect x="{left}" y="{top}" width="{plot_width}" height="{plot_height}" fill="#ffffff" stroke="#cbd5e1" />
-{''.join(y_axis_markup)}
-{''.join(x_axis_markup)}
-{''.join(series_markup)}
-{''.join(legend_markup)}
-</svg>
-"""
-    output_path.write_text(svg, encoding="utf-8")
+    build_svg_chart(
+        curves,
+        benchmark_name=benchmark_name,
+        output_path=output_path,
+        chart_title=f"US Stocks Strategy Value - Last {len(curves)} Trading Days",
+    )
 
 
 def main() -> None:
@@ -329,14 +236,6 @@ def main() -> None:
     best_config_name = str(comparison.loc[0, "config_name"])
     best_run = next(run for run in runs if run["config_name"] == best_config_name)
 
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    comparison_path = output_dir / "comparison_last_year.csv"
-    values_path = output_dir / "portfolio_values_last_year.csv"
-    chart_path = output_dir / "portfolio_values_last_year.svg"
-
-    comparison.to_csv(comparison_path, index=False)
-
     value_curves = pd.DataFrame({"date": best_run["value_curve"]["date"]})
     for run in runs:
         curve = pd.DataFrame(run["value_curve"]).rename(
@@ -345,7 +244,17 @@ def main() -> None:
         value_curves = value_curves.merge(curve[["date", f"{run['config_name']}_value"]], on="date", how="left")
     if "benchmark_value" in best_run["value_curve"].columns:
         value_curves["benchmark_value"] = best_run["value_curve"]["benchmark_value"].to_numpy()
-    value_curves.to_csv(values_path, index=False)
+    output_dir = ensure_output_dir(args.output_dir)
+    output_files = write_dataframe_artifacts(
+        output_dir,
+        [
+            DataFrameArtifact("comparison", comparison, "comparison_last_year.csv"),
+            DataFrameArtifact("portfolio_values", value_curves, "portfolio_values_last_year.csv"),
+        ],
+    )
+    comparison_path = output_files["comparison"]
+    values_path = output_files["portfolio_values"]
+    chart_path = output_dir / "portfolio_values_last_year.svg"
 
     benchmark_name = "benchmark_value" if "benchmark_value" in value_curves.columns else value_curves.columns[-1]
     _build_svg(value_curves, benchmark_name=benchmark_name, output_path=chart_path)
@@ -362,16 +271,15 @@ def main() -> None:
             "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
         },
     )
-    save_manifest(
-        output_dir / "report_manifest.json",
-        attach_output_files(
-            manifest,
-            {
-                "comparison": comparison_path,
-                "portfolio_values": values_path,
-                "chart": chart_path,
-            },
-        ),
+    write_manifest_with_outputs(
+        output_dir,
+        "report_manifest.json",
+        manifest,
+        {
+            "comparison": comparison_path,
+            "portfolio_values": values_path,
+            "chart": chart_path,
+        },
     )
 
     print(comparison.to_string(index=False))

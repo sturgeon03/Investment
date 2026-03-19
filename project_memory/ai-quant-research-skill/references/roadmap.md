@@ -22,7 +22,7 @@ The next phase should be:
 
 `shared-core expansion plus KR market-adapter follow-through on top of the promoted transformer lane`
 
-The repo now has a wider 60-name candidate pool, a generated free-approx monthly snapshot lane, repeated OOS windows, point-in-time eligibility filters, TCN/hybrid/LSTM controls, a transformer-style follow-up, and a focused transformer sweep tool. The strongest current transformer variants now use a clipped target objective on top of the smaller transformer with a 252-trading-day rolling training window. The refreshed standard reports confirm the split: `seq40 + clip_q95` remains strongest on the latest strict 1-year report, while `seq20 + clip_q95` remains strongest on repeated-window average. The standard report stack now has a canonical rerun path, and the first shared-core split exists in `invest_ai_core`. True constituent-history data is still backlog, but the immediate next step is now `shared-core expansion plus KR adapter build-out`, not more random model-family expansion and not RL.
+The repo now has a wider 60-name candidate pool, a generated free-approx monthly snapshot lane, repeated OOS windows, point-in-time eligibility filters, TCN/hybrid/LSTM controls, a transformer-style follow-up, and a focused transformer sweep tool. The strongest current transformer variants now use a clipped target objective on top of the smaller transformer with a 252-trading-day rolling training window. The refreshed standard reports confirm the split: `seq40 + clip_q95` remains strongest on the latest strict 1-year report, while `seq20 + clip_q95` remains strongest on repeated-window average. The standard report stack now has a canonical rerun path, the shared core now includes config, market-data, manifest, artifact-output, backtest, performance, reporting, and reusable backtest-window evaluation helpers, and `kr_stocks` now has its first executable adapter layer for config, ticker, calendar, DART normalization, a DART list client, a historical daily market-data client, a first bundle assembler, a first cacheable raw-data pipeline/CLI, a first benchmark-aware feature-assembly layer, a first research/backtest lane, and a first rules-vs-walk-forward-ridge comparison path with optional benchmark handling and CLI coverage. True constituent-history data is still backlog, but the immediate next step is now `shared-core expansion plus KR adapter build-out`, not more random model-family expansion and not RL.
 
 ## Ordered Next Steps
 
@@ -48,8 +48,8 @@ The repo now has a wider 60-name candidate pool, a generated free-approx monthly
 
 4. Build on the first shared-core split so KR can reuse the same research engine.
    - keep `invest_ai_core.config` and `invest_ai_core.market_data` as the initial market-agnostic surface
-   - extend the shared core into evaluation/report helpers only where the interface is genuinely market-agnostic
-   - keep SEC and future DART logic in market adapters, not in the shared core
+   - keep `invest_ai_core.backtest`, `invest_ai_core.performance`, `invest_ai_core.reporting`, `invest_ai_core.manifest`, `invest_ai_core.artifacts`, and the reusable backtest-window evaluation helper layer as the current evaluation/report seams and extend further only where the interface is genuinely market-agnostic
+   - keep SEC and DART ingestion logic in market adapters, not in the shared core
 
 5. Reposition LLM signals as auxiliary features.
    - use them as an input to the price model
@@ -80,3 +80,4 @@ The project will be moving in the right direction if the next implemented milest
 - a clearer answer on whether the remaining gap is now calibration/objective choice, feature design, or still mostly data realism
 - continued reproducibility via manifests that include the dynamic snapshot builder sidecar
 - learned-model results that remain credible under the stricter dynamic-universe and eligibility constraints
+- a KR adapter stack that can already normalize and fetch DART filing rows, historical daily bars, one research-ready data bundle, one cacheable raw-data pipeline, one benchmark-aware feature frame, one first research/backtest lane, and one first rules-vs-walk-forward-ridge comparison path without copying the US SEC path

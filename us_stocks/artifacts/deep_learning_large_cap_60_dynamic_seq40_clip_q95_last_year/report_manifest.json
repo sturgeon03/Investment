@@ -147,7 +147,7 @@
     "lookback_days": 365,
     "lstm_hidden_dim": 12,
     "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
-    "market_data_manifest_sha256": "99b911ef740ffc9e0b9e7cd7c538b7885b164780d55d3ed2a89139304c8942dc",
+    "market_data_manifest_sha256": "28a19ab3df3f8179b9d88342e2cdd97542e12b392c3788882f2b291122516ed0",
     "market_data_source": "cache",
     "max_epochs": 250,
     "min_training_samples": 252,
@@ -175,10 +175,10 @@
     "validation_window_days": 60,
     "weight_decay": 0.0001
   },
-  "generated_at_utc": "2026-03-19T01:17:00.084873+00:00",
+  "generated_at_utc": "2026-03-19T06:10:15.060995+00:00",
   "git": {
     "branch": "main",
-    "commit": "21685100dd4553da25edaaba44857b2941683704",
+    "commit": "128b3f05d979b902ad84adabdbb2c2a5f1ea0270",
     "dirty": true
   },
   "inputs": {

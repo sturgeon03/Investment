@@ -6,6 +6,8 @@ from typing import Any
 
 import pandas as pd
 
+from invest_ai_core.artifacts import DataFrameArtifact
+from invest_ai_core.runtime import ResearchArtifactBundle, write_research_artifact_bundle
 from us_invest_ai.backtest import BacktestResult, run_backtest
 from us_invest_ai.config import RunConfig
 from us_invest_ai.data import MarketDataBundle, prepare_market_data_bundle, save_prices
@@ -120,26 +122,44 @@ def save_research_outputs(
 
     save_prices(run.prices, output_files["prices"])
     save_prices(run.benchmark_prices, output_files["benchmark"])
-    run.features.to_csv(output_files["features"], index=False)
-    run.ranking_history.to_csv(output_files["ranking_history"], index=False)
-    run.target_weights.to_csv(output_files["target_weights"], index_label="date")
-    run.backtest_result.equity_curve.to_csv(output_files["equity_curve"], index_label="date")
-    run.backtest_result.summary.to_csv(output_files["summary"], index=False)
+    shared_output_files = write_research_artifact_bundle(
+        output_dir,
+        ResearchArtifactBundle(
+            features=run.features,
+            ranking_history=run.ranking_history,
+            target_weights=run.target_weights,
+            equity_curve=run.backtest_result.equity_curve,
+            summary=run.backtest_result.summary,
+        ),
+        extra_artifacts=[
+            *(
+                [DataFrameArtifact("llm_scores_used", run.llm_scores_used, "llm_scores_used.csv")]
+                if run.llm_scores_used is not None
+                else []
+            ),
+            *(
+                [DataFrameArtifact("router_training_frame", run.router_training_frame, "router_training_frame.csv")]
+                if run.router_training_frame is not None
+                else []
+            ),
+            *(
+                [DataFrameArtifact("target_portfolio", target_portfolio, "target_portfolio.csv")]
+                if target_portfolio is not None
+                else []
+            ),
+            *(
+                [DataFrameArtifact("recommended_orders", recommended_orders, "recommended_orders.csv")]
+                if recommended_orders is not None
+                else []
+            ),
+            *(
+                [DataFrameArtifact("next_positions_preview", next_positions, "next_positions_preview.csv")]
+                if next_positions is not None
+                else []
+            ),
+        ],
+    )
+    output_files.update(shared_output_files)
 
-    if run.llm_scores_used is not None:
-        output_files["llm_scores_used"] = output_dir / "llm_scores_used.csv"
-        run.llm_scores_used.to_csv(output_files["llm_scores_used"], index=False)
-    if run.router_training_frame is not None:
-        output_files["router_training_frame"] = output_dir / "router_training_frame.csv"
-        run.router_training_frame.to_csv(output_files["router_training_frame"], index=False)
-    if target_portfolio is not None:
-        output_files["target_portfolio"] = output_dir / "target_portfolio.csv"
-        target_portfolio.to_csv(output_files["target_portfolio"], index=False)
-    if recommended_orders is not None:
-        output_files["recommended_orders"] = output_dir / "recommended_orders.csv"
-        recommended_orders.to_csv(output_files["recommended_orders"], index=False)
-    if next_positions is not None:
-        output_files["next_positions_preview"] = output_dir / "next_positions_preview.csv"
-        next_positions.to_csv(output_files["next_positions_preview"], index=False)
     if manifest is not None:
         save_manifest(output_dir / "run_manifest.json", attach_output_files(manifest, output_files))

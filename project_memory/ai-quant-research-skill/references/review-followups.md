@@ -32,16 +32,31 @@ This file tracks which external review findings were already addressed in the lo
 - Added report-stack plumbing so the standard last-year report can take the stronger `seq40 + clip_q95` default and the repeated-window report can take the safer `seq20 + clip_q95` default.
 - Added a canonical `run_us_report_stack.ps1` entrypoint for the promoted clipped-objective defaults.
 - Added the first shared-core split through `invest_ai_core`, starting with reusable config loading and market-data bundle logic while keeping `us_invest_ai` compatibility wrappers intact.
+- Extended the shared core into `invest_ai_core.performance`, moving the generic summary-metric layer out of `us_invest_ai.backtest` while preserving the old import path.
+- Extended the shared core into `invest_ai_core.reporting`, moving value-curve, signal-metric, and SVG chart helpers out of the US report modules while preserving the existing wrapper surface.
+- Extended the shared core into reusable backtest-window evaluation helpers so multiple US report paths can build summary/curve rows without repeating slice logic.
+- Extended the shared core into manifest and artifact-output helpers so multiple report paths can save CSV artifacts and manifests without repeating the same output-assembly pattern.
+- Extended the shared core into a generic backtest engine so future non-US research lanes can reuse the same return/turnover/cost accounting path.
 - Re-ran the standard last-year and repeated-window reports in a dependency-complete environment and confirmed that `seq40 + clip_q95` still leads the latest-year slice while `seq20 + clip_q95` remains the safer repeated-window default.
 - Added the first `kr_stocks` market-adapter scaffold instead of leaving Korea as a placeholder only.
+- Added the first executable KR adapter code for YAML-backed market config loading, ticker canonicalization, and calendar/session alignment, with focused KR unit tests.
+- Added DART filing normalization plus a first DART list client for KR, including focused client tests and API-to-normalizer routing.
+- Added a first KR historical daily market-data client plus normalized OHLCV frame export, with fully mocked tests and vendor-ticker normalization through the existing conventions layer.
+- Added a first KR research-ready bundle assembler that combines daily price bars and normalized DART filings into tabular outputs.
+- Added a first KR raw-data pipeline and CLI with request-signature cache reuse, normalized raw outputs, and raw/run provenance manifests.
+- Added a first KR feature-assembly layer that merges normalized price bars with rolling filing-event counts and days-since-filing context.
+- Added a first KR research/backtest lane with a monthly ranking baseline and saved research artifacts.
+- Added optional KR benchmark handling, a first KR ridge baseline, and a first comparison-report CLI between rules and the learned baseline.
+- Added benchmark-relative KR feature columns plus CLI regression coverage for the first research and comparison entrypoints.
+- Promoted the first KR learned comparison path from a simple ridge baseline to a stricter walk-forward ridge baseline with validation metrics.
 
 ## Still Valid Backlog
 
 - Move from free-approx dynamic snapshots toward better point-in-time constituent history.
 - Replace scalar `llm_score` with structured subfactors such as guidance, demand, legal risk, and liquidity pressure.
 - Improve execution realism beyond fixed bps costs with spread/slippage and liquidity-aware assumptions.
-- Extend the shared-core split beyond config and market-data loading into the next genuinely market-agnostic layer.
-- Build the first real Korea adapter on top of the shared core instead of leaving `kr_stocks` at scaffold level.
+- Extend the shared-core split beyond the current evaluation and artifact-output helpers into the next genuinely market-agnostic report/runtime seam.
+- Harden the first KR research lane beyond the initial rules-vs-walk-forward-ridge baseline, likely by adding fuller purged validation and more realistic learned-model evaluation.
 
 ## Interpretation Rule
 

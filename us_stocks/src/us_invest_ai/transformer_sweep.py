@@ -5,10 +5,17 @@ from pathlib import Path
 
 import pandas as pd
 
-from us_invest_ai.backtest import build_summary, run_backtest
+from invest_ai_core.artifacts import (
+    DataFrameArtifact,
+    ensure_output_dir,
+    write_dataframe_artifacts,
+    write_manifest_with_outputs,
+)
+from invest_ai_core.evaluation import build_backtest_evaluation_row
+from us_invest_ai.backtest import run_backtest
 from us_invest_ai.config import load_config
 from us_invest_ai.data import prepare_market_data_bundle
-from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
+from us_invest_ai.experiment_manifest import build_run_manifest
 from us_invest_ai.features import build_features
 from us_invest_ai.performance_report import _build_svg
 from us_invest_ai.stability_report import _build_evaluation_windows
@@ -44,21 +51,6 @@ def format_objective_name(target_clip_quantile: float | None) -> str:
         return "raw"
     percentage = f"{target_clip_quantile * 100:.1f}".rstrip("0").rstrip(".")
     return f"clip_q{percentage.replace('.', 'p')}"
-
-
-def _build_value_curve(
-    daily_returns: pd.Series,
-    benchmark_returns: pd.Series | None,
-    initial_capital: float,
-) -> pd.DataFrame:
-    strategy_growth = (1.0 + daily_returns).cumprod()
-    strategy_value = initial_capital * (strategy_growth / strategy_growth.iloc[0])
-    frame = pd.DataFrame({"date": strategy_value.index, "strategy_value": strategy_value.to_numpy()})
-    if benchmark_returns is not None:
-        benchmark_growth = (1.0 + benchmark_returns).cumprod()
-        benchmark_value = initial_capital * (benchmark_growth / benchmark_growth.iloc[0])
-        frame["benchmark_value"] = benchmark_value.reindex(strategy_value.index).to_numpy()
-    return frame
 
 
 def _parse_args() -> argparse.Namespace:
@@ -176,43 +168,14 @@ def _last_year_row(
     initial_capital: float,
     extra: dict[str, object] | None = None,
 ) -> pd.DataFrame:
-    returns = result.daily_returns.loc[result.daily_returns.index >= eval_start]
-    turnover = result.turnover.reindex(returns.index)
-    benchmark_returns = (
-        result.benchmark_returns.reindex(returns.index)
-        if result.benchmark_returns is not None
-        else None
+    return build_backtest_evaluation_row(
+        model_name=model_name,
+        result=result,
+        history=history,
+        eval_start=eval_start,
+        initial_capital=initial_capital,
+        extra=extra,
     )
-    summary = build_summary(returns, turnover, benchmark_returns)
-    curve = _build_value_curve(returns, benchmark_returns, initial_capital)
-    row = summary.copy()
-    row.insert(0, "model_name", model_name)
-    row["eval_start"] = pd.Timestamp(returns.index.min()).date().isoformat()
-    row["eval_end"] = pd.Timestamp(returns.index.max()).date().isoformat()
-    row["starting_capital"] = initial_capital
-    row["ending_capital"] = float(curve["strategy_value"].iloc[-1])
-    row["profit_dollars"] = float(curve["strategy_value"].iloc[-1] - initial_capital)
-    history_slice = history.loc[pd.to_datetime(history["date"]).dt.normalize() >= eval_start].copy()
-    selected = history_slice.loc[history_slice["selected"]] if "selected" in history_slice.columns else pd.DataFrame()
-    row["avg_train_sample_count"] = (
-        float(selected["train_sample_count"].mean())
-        if not selected.empty and "train_sample_count" in selected.columns
-        else float("nan")
-    )
-    row["avg_validation_sample_count"] = (
-        float(selected["validation_sample_count"].mean())
-        if not selected.empty and "validation_sample_count" in selected.columns
-        else float("nan")
-    )
-    row["avg_validation_mse"] = (
-        float(selected["validation_mse"].mean())
-        if not selected.empty and "validation_mse" in selected.columns
-        else float("nan")
-    )
-    if extra:
-        for key, value in extra.items():
-            row[key] = value
-    return row
 
 
 def _window_rows(
@@ -227,48 +190,19 @@ def _window_rows(
     for window in windows:
         eval_start = pd.Timestamp(window["eval_start"]).normalize()
         eval_end = pd.Timestamp(window["eval_end"]).normalize()
-        returns = result.daily_returns.loc[(result.daily_returns.index >= eval_start) & (result.daily_returns.index <= eval_end)]
-        turnover = result.turnover.reindex(returns.index)
-        benchmark_returns = (
-            result.benchmark_returns.reindex(returns.index)
-            if result.benchmark_returns is not None
-            else None
+        rows.append(
+            build_backtest_evaluation_row(
+                model_name=model_name,
+                result=result,
+                history=history,
+                eval_start=eval_start,
+                eval_end=eval_end,
+                initial_capital=initial_capital,
+                window_label=str(window["window_label"]),
+                include_rebalance_count=True,
+                extra=extra,
+            )
         )
-        summary = build_summary(returns, turnover, benchmark_returns)
-        curve = _build_value_curve(returns, benchmark_returns, initial_capital)
-        row = summary.copy()
-        row.insert(0, "model_name", model_name)
-        row.insert(1, "window_label", str(window["window_label"]))
-        row["eval_start"] = eval_start.date().isoformat()
-        row["eval_end"] = eval_end.date().isoformat()
-        row["starting_capital"] = initial_capital
-        row["ending_capital"] = float(curve["strategy_value"].iloc[-1])
-        row["profit_dollars"] = float(curve["strategy_value"].iloc[-1] - initial_capital)
-        history_slice = history.loc[
-            (pd.to_datetime(history["date"]).dt.normalize() >= eval_start)
-            & (pd.to_datetime(history["date"]).dt.normalize() <= eval_end)
-        ].copy()
-        selected = history_slice.loc[history_slice["selected"]] if "selected" in history_slice.columns else pd.DataFrame()
-        row["rebalance_count"] = int(history_slice["date"].nunique()) if not history_slice.empty else 0
-        row["avg_train_sample_count"] = (
-            float(selected["train_sample_count"].mean())
-            if not selected.empty and "train_sample_count" in selected.columns
-            else float("nan")
-        )
-        row["avg_validation_sample_count"] = (
-            float(selected["validation_sample_count"].mean())
-            if not selected.empty and "validation_sample_count" in selected.columns
-            else float("nan")
-        )
-        row["avg_validation_mse"] = (
-            float(selected["validation_mse"].mean())
-            if not selected.empty and "validation_mse" in selected.columns
-            else float("nan")
-        )
-        if extra:
-            for key, value in extra.items():
-                row[key] = value
-        rows.append(row)
     return rows
 
 
@@ -457,17 +391,20 @@ def main() -> None:
     )
     chart_frame = chart_frame.rename(columns={column: f"{column}_value" for column in chart_frame.columns if column != "date"})
 
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    last_year_path = output_dir / "transformer_last_year_sweep.csv"
-    window_path = output_dir / "transformer_window_summary.csv"
-    aggregate_path = output_dir / "transformer_stability_sweep.csv"
-    focused_chart_path = output_dir / "transformer_stability_focus.csv"
-
-    last_year_summary.to_csv(last_year_path, index=False)
-    window_summary.to_csv(window_path, index=False)
-    aggregate.to_csv(aggregate_path, index=False)
-    focused_chart.to_csv(focused_chart_path, index=False)
+    output_dir = ensure_output_dir(args.output_dir)
+    output_files = write_dataframe_artifacts(
+        output_dir,
+        [
+            DataFrameArtifact("last_year_sweep", last_year_summary, "transformer_last_year_sweep.csv"),
+            DataFrameArtifact("window_summary", window_summary, "transformer_window_summary.csv"),
+            DataFrameArtifact("stability_sweep", aggregate, "transformer_stability_sweep.csv"),
+            DataFrameArtifact("focus_table", focused_chart, "transformer_stability_focus.csv"),
+        ],
+    )
+    last_year_path = output_files["last_year_sweep"]
+    window_path = output_files["window_summary"]
+    aggregate_path = output_files["stability_sweep"]
+    focused_chart_path = output_files["focus_table"]
 
     chart_svg_path = output_dir / "transformer_stability_focus.svg"
     _build_svg(chart_frame, benchmark_name="configured_baseline_value", output_path=chart_svg_path)
@@ -496,18 +433,17 @@ def main() -> None:
             "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
         },
     )
-    save_manifest(
-        output_dir / "transformer_sweep_manifest.json",
-        attach_output_files(
-            manifest,
-            {
-                "last_year_sweep": last_year_path,
-                "window_summary": window_path,
-                "stability_sweep": aggregate_path,
-                "focus_table": focused_chart_path,
-                "focus_chart": chart_svg_path,
-            },
-        ),
+    write_manifest_with_outputs(
+        output_dir,
+        "transformer_sweep_manifest.json",
+        manifest,
+        {
+            "last_year_sweep": last_year_path,
+            "window_summary": window_path,
+            "stability_sweep": aggregate_path,
+            "focus_table": focused_chart_path,
+            "focus_chart": chart_svg_path,
+        },
     )
 
     print(last_year_summary.to_string(index=False))

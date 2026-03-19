@@ -6,10 +6,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from us_invest_ai.backtest import build_summary, run_backtest
+from invest_ai_core.artifacts import (
+    DataFrameArtifact,
+    ensure_output_dir,
+    write_dataframe_artifacts,
+    write_manifest_with_outputs,
+)
+from invest_ai_core.evaluation import evaluate_backtest_window
+from invest_ai_core.reporting import compute_signal_metrics
+from us_invest_ai.backtest import run_backtest
 from us_invest_ai.config import load_config
 from us_invest_ai.data import prepare_market_data_bundle
-from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
+from us_invest_ai.experiment_manifest import build_run_manifest
 from us_invest_ai.features import build_features
 from us_invest_ai.ml_strategy import MLModelConfig, generate_ml_target_weights
 from us_invest_ai.performance_report import _build_svg
@@ -69,28 +77,8 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _build_value_curve(
-    daily_returns: pd.Series,
-    benchmark_returns: pd.Series | None,
-    initial_capital: float,
-) -> pd.DataFrame:
-    strategy_growth = (1.0 + daily_returns).cumprod()
-    strategy_value = initial_capital * (strategy_growth / strategy_growth.iloc[0])
-    frame = pd.DataFrame({"date": strategy_value.index, "strategy_value": strategy_value.to_numpy()})
-    if benchmark_returns is not None:
-        benchmark_growth = (1.0 + benchmark_returns).cumprod()
-        benchmark_value = initial_capital * (benchmark_growth / benchmark_growth.iloc[0])
-        frame["benchmark_value"] = benchmark_value.reindex(strategy_value.index).to_numpy()
-    return frame
-
-
 def _signal_metrics(ranking_history: pd.DataFrame) -> tuple[float, float]:
-    if ranking_history.empty or "llm_score" not in ranking_history.columns:
-        return 0.0, 0.0
-    llm_values = ranking_history["llm_score"].fillna(0.0).astype(float)
-    signal_coverage = float((llm_values.abs() > 0).mean()) if len(llm_values) else 0.0
-    avg_llm_abs_score = float(llm_values.abs().mean()) if len(llm_values) else 0.0
-    return signal_coverage, avg_llm_abs_score
+    return compute_signal_metrics(ranking_history)
 
 
 def main() -> None:
@@ -170,16 +158,19 @@ def main() -> None:
         else None
     )
 
-    ml_summary = build_summary(ml_returns, ml_turnover, ml_benchmark)
-    baseline_summary = build_summary(baseline_returns, baseline_turnover, baseline_benchmark)
+    ml_evaluation = evaluate_backtest_window(ml_result, eval_start, initial_capital=args.initial_capital)
+    baseline_evaluation = evaluate_backtest_window(
+        baseline_result,
+        eval_start,
+        initial_capital=args.initial_capital,
+    )
+    ml_summary = ml_evaluation.summary
+    baseline_summary = baseline_evaluation.summary
 
-    ml_curve = _build_value_curve(ml_returns, ml_benchmark, args.initial_capital)
-    baseline_curve = _build_value_curve(baseline_returns, baseline_benchmark, args.initial_capital)
+    ml_curve = ml_evaluation.curve
+    baseline_curve = baseline_evaluation.curve
     eval_end = pd.to_datetime(ml_returns.index.max()).normalize()
     eval_start_actual = pd.to_datetime(ml_returns.index.min()).normalize()
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     summary_rows: list[pd.DataFrame] = []
     for model_name, summary, history, curve in (
@@ -205,23 +196,31 @@ def main() -> None:
         summary_rows.append(row)
 
     summary_frame = pd.concat(summary_rows, ignore_index=True)
-    summary_path = output_dir / "supervised_ml_summary_last_year.csv"
-    summary_frame.to_csv(summary_path, index=False)
-
     values_frame = pd.DataFrame({"date": ml_curve["date"]})
     values_frame["supervised_ml_value"] = ml_curve["strategy_value"].to_numpy()
     values_frame["configured_baseline_value"] = baseline_curve["strategy_value"].to_numpy()
     if "benchmark_value" in ml_curve.columns:
         values_frame["benchmark_value"] = ml_curve["benchmark_value"].to_numpy()
-    values_path = output_dir / "supervised_ml_values_last_year.csv"
-    values_frame.to_csv(values_path, index=False)
+    output_dir = ensure_output_dir(args.output_dir)
+    output_files = write_dataframe_artifacts(
+        output_dir,
+        [
+            DataFrameArtifact("summary", summary_frame, "supervised_ml_summary_last_year.csv"),
+            DataFrameArtifact("values", values_frame, "supervised_ml_values_last_year.csv"),
+            DataFrameArtifact(
+                "ranking_history",
+                ml_history.loc[ml_history["date"] >= eval_start_actual],
+                "supervised_ml_ranking_history_last_year.csv",
+            ),
+        ],
+    )
+    summary_path = output_files["summary"]
+    values_path = output_files["values"]
+    ml_history_path = output_files["ranking_history"]
 
     chart_path = output_dir / "supervised_ml_values_last_year.svg"
     benchmark_name = "benchmark_value" if "benchmark_value" in values_frame.columns else "configured_baseline_value"
     _build_svg(values_frame, benchmark_name=benchmark_name, output_path=chart_path)
-
-    ml_history_path = output_dir / "supervised_ml_ranking_history_last_year.csv"
-    ml_history.loc[ml_history["date"] >= eval_start_actual].to_csv(ml_history_path, index=False)
     manifest = build_run_manifest(
         config,
         experiment_name="supervised_ml_report",
@@ -237,17 +236,16 @@ def main() -> None:
             "market_data_manifest_sha256": market_data.provenance.get("manifest_sha256"),
         },
     )
-    save_manifest(
-        output_dir / "report_manifest.json",
-        attach_output_files(
-            manifest,
-            {
-                "summary": summary_path,
-                "values": values_path,
-                "chart": chart_path,
-                "ranking_history": ml_history_path,
-            },
-        ),
+    write_manifest_with_outputs(
+        output_dir,
+        "report_manifest.json",
+        manifest,
+        {
+            "summary": summary_path,
+            "values": values_path,
+            "chart": chart_path,
+            "ranking_history": ml_history_path,
+        },
     )
 
     print(summary_frame.to_string(index=False))

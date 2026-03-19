@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from invest_ai_core.reporting import compute_signal_metrics
 from us_invest_ai.backtest import build_summary, run_backtest
 from us_invest_ai.config import DataConfig, EligibilityConfig, load_config
 from us_invest_ai.data import prepare_market_data_bundle
@@ -80,13 +81,7 @@ def _slice_ranking_history(ranking_history: pd.DataFrame, eval_start: str | None
 
 
 def _signal_metrics(ranking_history: pd.DataFrame) -> tuple[float, float]:
-    if ranking_history.empty or "llm_score" not in ranking_history.columns:
-        return 0.0, 0.0
-
-    llm_values = ranking_history["llm_score"].fillna(0.0).astype(float)
-    signal_coverage = float((llm_values.abs() > 0).mean()) if len(llm_values) else 0.0
-    avg_llm_abs_score = float(llm_values.abs().mean()) if len(llm_values) else 0.0
-    return signal_coverage, avg_llm_abs_score
+    return compute_signal_metrics(ranking_history)
 
 
 def _changed_rebalance_count(base_history: pd.DataFrame, candidate_history: pd.DataFrame) -> int:

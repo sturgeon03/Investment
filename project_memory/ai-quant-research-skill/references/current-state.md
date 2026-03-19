@@ -7,7 +7,7 @@ Last updated: 2026-03-19
 The repo is organized by market:
 
 - `us_stocks/`: active research pipeline
-- `kr_stocks/`: reserved only, not yet implemented as a full pipeline
+- `kr_stocks/`: executable Korea-market research scaffold with a first cacheable raw-data pipeline, monthly rules lane, benchmark-aware feature frame, and first rules-vs-walk-forward-ridge comparison path
 
 The US project already includes:
 
@@ -300,8 +300,8 @@ The local workspace has now hardened several items that were previously weak or 
 - the repo now also has a focused transformer sweep tool for baseline-vs-transformer robustness checks across sequence lookback and target-clipping objective choices
 - the standard report stack now has a canonical rerun path through `run_us_report_stack.ps1`, with the latest-year report refreshed on the stronger `seq40 + clip_q95` path and the repeated-window report refreshed on the safer `seq20 + clip_q95` path
 - the refreshed strict dynamic-lane reports confirm the current split: latest-year ending capital is about `$127.8k` for transformer vs `$118.3k` baseline, while repeated-window average ending capital is about `$121.3k` for transformer vs `$115.6k` baseline
-- the first shared-core split is now in place through `invest_ai_core`, which holds the market-agnostic config loader and market-data bundle while preserving `us_invest_ai.config` and `us_invest_ai.data` as compatibility wrappers
-- `kr_stocks` is no longer just an empty placeholder; it now has a Korea-market scaffold for ticker conventions, DART-oriented documentation, trading-calendar assumptions, and fee/tax placeholders
+- the first shared-core split is now in place through `invest_ai_core`, which holds the market-agnostic config loader, market-data bundle, manifest helpers, artifact-output helpers, performance summary layer, shared reporting helpers, and reusable backtest-window evaluation helpers while preserving `us_invest_ai.config`, `us_invest_ai.data`, `us_invest_ai.backtest.build_summary`, and report-wrapper compatibility
+- `kr_stocks` is no longer just an empty placeholder; it now has a Korea-market scaffold plus executable adapter code for KR config loading, ticker normalization, calendar/session alignment, DART filing normalization, a first DART list client, a first historical daily market-data client, a first research-ready bundle assembler, a first runnable raw-data pipeline with cache/provenance manifests, a first feature-assembly layer that merges price bars with benchmark-relative and filing-event context, a first monthly research/backtest lane, and a first rules-vs-walk-forward-ridge comparison path with optional benchmark handling and CLI coverage
 
 An external static review suggested that `llm_score` was being overwritten to zero in the main strategy path. That is not true in the current local workspace. Treat that review item as stale for this branch, but keep the new regression tests.
 
@@ -314,4 +314,4 @@ The repo is not yet going far enough in the direction the user actually wants:
 - the user wants AI quant investing
 - the current system is still stronger as infrastructure than as AI alpha
 
-The next stage should therefore focus on extending the shared-core split beyond config and market-data loading, then building the first real KR market adapter on top of that seam while keeping true constituent-history data as backlog and avoiding premature RL work.
+The next stage should therefore focus on extending the shared-core split only where a real market-agnostic seam remains, then hardening the first KR rules-vs-walk-forward-ridge comparison path into a more credible research lane with fuller purged validation and richer learned-model controls, while keeping true constituent-history data as backlog and avoiding premature RL work.

@@ -1,3 +1,3 @@
-"""Shared market-agnostic research core for reusable config and data layers."""
+"""Shared market-agnostic research core for reusable config, data, metrics, and report helpers."""
 
-__all__ = ["config", "market_data"]
+__all__ = ["artifacts", "backtest", "config", "market_data", "performance", "reporting", "evaluation", "manifest", "runtime"]

@@ -4,11 +4,15 @@ import unittest
 
 import pandas as pd
 
+import invest_ai_core.performance as shared_performance
 from us_invest_ai.backtest import build_summary, run_backtest
 from us_invest_ai.config import RiskConfig
 
 
 class BacktestTests(unittest.TestCase):
+    def test_shared_performance_summary_is_compatible_with_us_wrapper(self) -> None:
+        self.assertIs(shared_performance.build_summary, build_summary)
+
     def test_backtest_uses_previous_day_weights(self) -> None:
         prices = pd.DataFrame(
             {
