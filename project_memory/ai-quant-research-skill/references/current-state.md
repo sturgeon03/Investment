@@ -277,7 +277,7 @@ The biggest remaining gaps are:
 - no purged cross-validation or embargo-style validation
 - no true point-in-time constituent history yet
 - only an approximate phased universe, not an institutional point-in-time membership dataset
-- no standard-report promotion yet for the clipped-objective transformer winner, and no final tie-break resolution yet between the `seq20` and `seq40` variants
+- no true institutional constituent-history data yet, even though the current dynamic-snapshot lane is now the standing realism control
 
 ## Recent Hardening
 
@@ -298,7 +298,9 @@ The local workspace has now hardened several items that were previously weak or 
 - the repo now also has temporal convolution, hybrid sequence-plus-static, and recurrent LSTM baselines integrated into the last-year and repeated-window report stack
 - the repo now also has a transformer-style baseline with a rolling training window that finishes on the strict dynamic-universe lane
 - the repo now also has a focused transformer sweep tool for baseline-vs-transformer robustness checks across sequence lookback and target-clipping objective choices
-- the standard report stack now has wiring to accept clipped-objective transformer defaults, with the latest-year report ready for the stronger `seq40 + clip_q95` path and the repeated-window report ready for the safer `seq20 + clip_q95` path
+- the standard report stack now has a canonical rerun path through `run_us_report_stack.ps1`, with the latest-year report refreshed on the stronger `seq40 + clip_q95` path and the repeated-window report refreshed on the safer `seq20 + clip_q95` path
+- the refreshed strict dynamic-lane reports confirm the current split: latest-year ending capital is about `$127.8k` for transformer vs `$118.3k` baseline, while repeated-window average ending capital is about `$121.3k` for transformer vs `$115.6k` baseline
+- the first shared-core split is now in place through `invest_ai_core`, which holds the market-agnostic config loader and market-data bundle while preserving `us_invest_ai.config` and `us_invest_ai.data` as compatibility wrappers
 - `kr_stocks` is no longer just an empty placeholder; it now has a Korea-market scaffold for ticker conventions, DART-oriented documentation, trading-calendar assumptions, and fee/tax placeholders
 
 An external static review suggested that `llm_score` was being overwritten to zero in the main strategy path. That is not true in the current local workspace. Treat that review item as stale for this branch, but keep the new regression tests.
@@ -312,4 +314,4 @@ The repo is not yet going far enough in the direction the user actually wants:
 - the user wants AI quant investing
 - the current system is still stronger as infrastructure than as AI alpha
 
-The next stage should therefore focus on rerunning the standard report stack on top of the new clipped-objective transformer defaults, then begin the first shared-core split so `kr_stocks` can reuse the real research core instead of diverging early, while keeping true constituent-history data as backlog and avoiding premature RL work.
+The next stage should therefore focus on extending the shared-core split beyond config and market-data loading, then building the first real KR market adapter on top of that seam while keeping true constituent-history data as backlog and avoiding premature RL work.

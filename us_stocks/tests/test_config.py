@@ -4,10 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import invest_ai_core.config as shared_config
 from us_invest_ai.config import load_config
 
 
 class ConfigTests(unittest.TestCase):
+    def test_shared_config_module_is_compatible_with_us_wrapper(self) -> None:
+        self.assertIs(shared_config.load_config, load_config)
+
     def test_load_config_parses_scoring_and_workflow_sections(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

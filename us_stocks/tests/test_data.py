@@ -8,11 +8,16 @@ from unittest.mock import patch
 
 import pandas as pd
 
+import invest_ai_core.market_data as shared_market_data
 from us_invest_ai.data import download_ohlcv, prepare_market_data_bundle
 from us_invest_ai.experiment_manifest import sha256_file
 
 
 class DataBundleTests(unittest.TestCase):
+    def test_shared_market_data_module_is_compatible_with_us_wrapper(self) -> None:
+        self.assertIs(shared_market_data.download_ohlcv, download_ohlcv)
+        self.assertIs(shared_market_data.prepare_market_data_bundle, prepare_market_data_bundle)
+
     def test_download_ohlcv_retries_after_transient_failure(self) -> None:
         downloaded = pd.DataFrame(
             {

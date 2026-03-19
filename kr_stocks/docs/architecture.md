@@ -25,4 +25,6 @@ If a module is market-agnostic and reusable, it should eventually move into a sh
 
 ## Current Status
 
-This folder only defines the scaffold and assumptions. No production data adapter or alpha model is implemented yet.
+The repo now has a first shared package for market-agnostic config and market-data logic in `invest_ai_core`.
+
+This folder still only defines the Korea-specific scaffold and assumptions. No production Korea data adapter or alpha model is implemented yet.

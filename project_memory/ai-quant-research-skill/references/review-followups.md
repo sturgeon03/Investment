@@ -30,6 +30,9 @@ This file tracks which external review findings were already addressed in the lo
 - Added focused transformer sweep tooling and confirmed the current best combo is a smaller transformer with a 252-trading-day rolling training window.
 - Extended the focused transformer sweep to cover sequence-lookback length and target-clipping objective design, and confirmed that clipped targets beat the raw objective while `seq40` wins the latest-year slice and `seq20` wins repeated-window average.
 - Added report-stack plumbing so the standard last-year report can take the stronger `seq40 + clip_q95` default and the repeated-window report can take the safer `seq20 + clip_q95` default.
+- Added a canonical `run_us_report_stack.ps1` entrypoint for the promoted clipped-objective defaults.
+- Added the first shared-core split through `invest_ai_core`, starting with reusable config loading and market-data bundle logic while keeping `us_invest_ai` compatibility wrappers intact.
+- Re-ran the standard last-year and repeated-window reports in a dependency-complete environment and confirmed that `seq40 + clip_q95` still leads the latest-year slice while `seq20 + clip_q95` remains the safer repeated-window default.
 - Added the first `kr_stocks` market-adapter scaffold instead of leaving Korea as a placeholder only.
 
 ## Still Valid Backlog
@@ -37,8 +40,8 @@ This file tracks which external review findings were already addressed in the lo
 - Move from free-approx dynamic snapshots toward better point-in-time constituent history.
 - Replace scalar `llm_score` with structured subfactors such as guidance, demand, legal risk, and liquidity pressure.
 - Improve execution realism beyond fixed bps costs with spread/slippage and liquidity-aware assumptions.
-- Promote the clipped-objective transformer winner into the standard report stack and resolve the `seq20` versus `seq40` tie-break.
-- Rerun the standard reports on top of the new transformer defaults and start the first shared-core split between market-agnostic research code and US-specific adapters.
+- Extend the shared-core split beyond config and market-data loading into the next genuinely market-agnostic layer.
+- Build the first real Korea adapter on top of the shared core instead of leaving `kr_stocks` at scaffold level.
 
 ## Interpretation Rule
 

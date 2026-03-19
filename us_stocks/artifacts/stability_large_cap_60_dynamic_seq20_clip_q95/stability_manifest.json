@@ -135,40 +135,54 @@
   "config_file_sha256": "d8ee9ce8494f79c476efccd173fe26760b2053c6f8ac895b8285852949471400",
   "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_60_dynamic_eligibility.yaml",
   "config_snapshot_sha256": "3224e5992e2b83d548339313f77a287a217234337fcb0fb372be7a7d03e72654",
-  "experiment_name": "transformer_sweep",
+  "experiment_name": "stability_report",
   "extra": {
-    "best_transformer_name": "transformer_d4_lb252_seq20_clip_q95",
+    "batch_size": 128,
     "embargo_days": 20,
+    "hidden_dim": 32,
+    "hybrid_static_hidden_dim": 16,
     "label_horizon_days": 20,
-    "latest_market_date": "2026-03-17",
-    "lookback_days": 365,
+    "learning_rate": 0.01,
+    "lstm_hidden_dim": 12,
     "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
-    "market_data_manifest_sha256": "da5fbfb68dd8e600f07f8f1d84173f40c85c36423b0fabd57c36901609ac4da6",
+    "market_data_manifest_sha256": "589d4dfdc95cc0efd22c40ba112aec4a8fcee8fec600119ed6a4fd520e84ab95",
     "market_data_source": "cache",
+    "max_epochs": 250,
     "min_training_samples": 252,
     "min_validation_samples": 120,
-    "sequence_lookback_windows": [
-      10,
-      20,
-      40
-    ],
+    "patience": 25,
+    "ridge_alpha": 8.0,
+    "sequence_batch_size": 256,
+    "sequence_hidden_channels": 8,
+    "sequence_kernel_size": 5,
+    "sequence_learning_rate": 0.005,
+    "sequence_lookback_window": 20,
+    "sequence_max_epochs": 120,
+    "sequence_patience": 15,
+    "sequence_weight_decay": 0.0001,
     "step_trading_days": 252,
-    "target_clip_quantiles": [
-      null,
-      0.9,
-      0.95
-    ],
-    "transformer_model_dims": [
-      4
-    ],
-    "transformer_training_lookback_days": [
-      252
-    ],
+    "transformer_model_dim": 4,
+    "transformer_sequence_lookback_window": 20,
+    "transformer_target_clip_quantile": 0.95,
+    "transformer_training_lookback_days": 252,
+    "tree_l2_regularization": 0.0,
+    "tree_learning_rate": 0.05,
+    "tree_max_depth": 3,
+    "tree_max_iter": 200,
+    "tree_min_samples_leaf": 20,
+    "use_llm_feature": false,
     "validation_window_days": 60,
+    "weight_decay": 0.0001,
     "window_count": 4,
+    "window_labels": [
+      "2022-03-10_to_2023-03-10",
+      "2023-03-13_to_2024-03-12",
+      "2024-03-13_to_2025-03-14",
+      "2025-03-17_to_2026-03-17"
+    ],
     "window_trading_days": 252
   },
-  "generated_at_utc": "2026-03-19T01:32:02.434699+00:00",
+  "generated_at_utc": "2026-03-19T01:52:20.549121+00:00",
   "git": {
     "branch": "main",
     "commit": "21685100dd4553da25edaaba44857b2941683704",
@@ -187,30 +201,25 @@
     "universe_snapshots_manifest_sha256": "0ce4d2714d298041fb13fff0110a0b6ee77934fbc1d853146bc1d63c0e034bb0"
   },
   "output_files": {
-    "focus_chart": {
+    "aggregate": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\transformer_sweep_v2\\transformer_stability_focus.svg",
-      "sha256": "e99ade5049d52c83fb163fce527b3ce62c33db66301659951424cbdb13d08cff"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\stability_large_cap_60_dynamic_seq20_clip_q95\\stability_model_aggregate.csv",
+      "sha256": "8ddc5ec1421e3d36bfd37fbbef950dec72bb15bf2c417a4279547d3801f733a9"
     },
-    "focus_table": {
+    "chart": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\transformer_sweep_v2\\transformer_stability_focus.csv",
-      "sha256": "71d8922d632561d6ddbc1d106e4af4d4034c4fa94f58244f1a38b0eb80430e3d"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\stability_large_cap_60_dynamic_seq20_clip_q95\\stability_window_end_values.svg",
+      "sha256": "26561f6d766b1d91ab76ba126db79540b17ec736306c957bef10141b1ecf6ab9"
     },
-    "last_year_sweep": {
+    "window_end_values": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\transformer_sweep_v2\\transformer_last_year_sweep.csv",
-      "sha256": "f480a2e06a6c13ad83b3ca73b1572ff148bb87b1e0692dd44afa530dc71abf5f"
-    },
-    "stability_sweep": {
-      "exists": true,
-      "path": "us_stocks\\artifacts\\transformer_sweep_v2\\transformer_stability_sweep.csv",
-      "sha256": "5722a1e486a141f1ba007db948ddd2f717297c9786c450ef1cf1998d7cb08bba"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\stability_large_cap_60_dynamic_seq20_clip_q95\\stability_window_end_values.csv",
+      "sha256": "16e86a174e35f64534757b20eb3df0ea92e7530e1f24a6ff4707d4877d837fa2"
     },
     "window_summary": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\transformer_sweep_v2\\transformer_window_summary.csv",
-      "sha256": "9de0524f6cde6f5ba4aff6f46e3942ee3ae807c9a695d403da715025069a350b"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\stability_large_cap_60_dynamic_seq20_clip_q95\\stability_window_summary.csv",
+      "sha256": "44c9732319e51c649651fb8f325ecd729b0a07ca71302ad416d640978aca956f"
     }
   },
   "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks"

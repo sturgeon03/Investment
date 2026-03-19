@@ -95,9 +95,18 @@ Run the new dynamic-universe control lane:
 
 ```powershell
 python -m us_invest_ai.main --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml
-python -m us_invest_ai.deep_learning_report --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --output-dir .\us_stocks\artifacts\deep_learning_large_cap_60_dynamic_last_year
-python -m us_invest_ai.stability_report --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --output-dir .\us_stocks\artifacts\stability_large_cap_60_dynamic_eligibility
+python -m us_invest_ai.deep_learning_report --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --transformer-sequence-lookback-window 40 --transformer-target-clip-quantile 0.95 --output-dir .\us_stocks\artifacts\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year
+python -m us_invest_ai.stability_report --config .\us_stocks\config\soft_price_large_cap_60_dynamic_eligibility.yaml --transformer-sequence-lookback-window 20 --transformer-target-clip-quantile 0.95 --output-dir .\us_stocks\artifacts\stability_large_cap_60_dynamic_seq20_clip_q95
 ```
+
+Run the promoted clipped-objective report stack with one command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_us_report_stack.ps1 -PythonExe "C:\Path\To\python.exe"
+```
+
+The standard latest-year report now uses `seq40 + clip_q95`, while the repeated-window report uses `seq20 + clip_q95` until new evidence overturns that split.
+Add `-RunSweep` if you also want to rerun the slower focused transformer sweep.
 
 Run the focused transformer robustness sweep:
 
@@ -404,6 +413,8 @@ powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\register_us_daily_t
 ```
 
 The helper scripts are [run_us_daily.ps1](C:/Users/sym89/Desktop/Investment/us_stocks/scripts/run_us_daily.ps1) and [register_us_daily_task.ps1](C:/Users/sym89/Desktop/Investment/us_stocks/scripts/register_us_daily_task.ps1).
+
+Use [run_us_report_stack.ps1](C:/Users/sym89/Desktop/Investment/us_stocks/scripts/run_us_report_stack.ps1) when you want the canonical clipped-transformer report rerun rather than the daily SEC workflow.
 
 ## Current Research Direction
 

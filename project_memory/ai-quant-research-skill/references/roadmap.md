@@ -20,9 +20,9 @@ Current assessment:
 
 The next phase should be:
 
-`objective-aware transformer promotion on top of the dynamic-universe control lane`
+`shared-core expansion plus KR market-adapter follow-through on top of the promoted transformer lane`
 
-The repo now has a wider 60-name candidate pool, a generated free-approx monthly snapshot lane, repeated OOS windows, point-in-time eligibility filters, TCN/hybrid/LSTM controls, a transformer-style follow-up, and a focused transformer sweep tool. The strongest current transformer variants now use a clipped target objective on top of the smaller transformer with a 252-trading-day rolling training window. `seq40 + clip_q95` is strongest on the latest strict 1-year report, while `seq20 + clip_q95` is strongest on focused repeated-window average. The standard report stack has now been wired so those defaults can be promoted cleanly, and `kr_stocks` now has a first Korea-market scaffold. True constituent-history data is still backlog, but the immediate next step is now `report rerun plus first shared-core split`, not more random model-family expansion and not RL.
+The repo now has a wider 60-name candidate pool, a generated free-approx monthly snapshot lane, repeated OOS windows, point-in-time eligibility filters, TCN/hybrid/LSTM controls, a transformer-style follow-up, and a focused transformer sweep tool. The strongest current transformer variants now use a clipped target objective on top of the smaller transformer with a 252-trading-day rolling training window. The refreshed standard reports confirm the split: `seq40 + clip_q95` remains strongest on the latest strict 1-year report, while `seq20 + clip_q95` remains strongest on repeated-window average. The standard report stack now has a canonical rerun path, and the first shared-core split exists in `invest_ai_core`. True constituent-history data is still backlog, but the immediate next step is now `shared-core expansion plus KR adapter build-out`, not more random model-family expansion and not RL.
 
 ## Ordered Next Steps
 
@@ -41,14 +41,14 @@ The repo now has a wider 60-name candidate pool, a generated free-approx monthly
    - keep the feature lane benchmark-aware and universe-aware
 
 3. Harden the strongest sequence model now that TCN, hybrid, LSTM, and transformer controls exist.
-   - rerun the standard last-year and repeated-window reports on top of the new clipped-objective defaults
+   - keep the canonical report stack as the default validation path for the promoted clipped-objective defaults
    - keep the clipped-objective transformer as the current best candidate family
-   - treat `seq20` as the safer repeated-window default and `seq40` as the more aggressive latest-window default unless new evidence overturns that split
+   - treat `seq20` as the safer repeated-window default and `seq40` as the more aggressive latest-window default until new evidence overturns that split
    - only revisit RL after the price-model lane is clearly credible
 
-4. Start the first shared-core split so KR can reuse the same research engine.
-   - separate `core config` from market workflow config
-   - separate the market-data provider interface from the standardized bundle contract
+4. Build on the first shared-core split so KR can reuse the same research engine.
+   - keep `invest_ai_core.config` and `invest_ai_core.market_data` as the initial market-agnostic surface
+   - extend the shared core into evaluation/report helpers only where the interface is genuinely market-agnostic
    - keep SEC and future DART logic in market adapters, not in the shared core
 
 5. Reposition LLM signals as auxiliary features.
@@ -67,6 +67,7 @@ When choosing between two possible next tasks:
 - choose the one that improves validation rigor over convenience
 - choose price-model work over more SEC/LLM prompt tuning
 - choose interpretable baselines before complex architectures
+- choose shared-core reuse over market-specific copy-paste
 - choose one clean benchmark experiment over multiple shallow experiments
 
 ## What "Good Progress" Looks Like Next
@@ -74,6 +75,7 @@ When choosing between two possible next tasks:
 The project will be moving in the right direction if the next implemented milestone produces:
 
 - a standard report stack that uses the best clipped-objective transformer candidate rather than the older raw objective
+- a canonical rerun path that refreshes the latest-year and repeated-window artifacts without ad hoc commands
 - repeated window comparisons that clarify whether `seq20` or `seq40` is the better production research default
 - a clearer answer on whether the remaining gap is now calibration/objective choice, feature design, or still mostly data realism
 - continued reproducibility via manifests that include the dynamic snapshot builder sidecar
