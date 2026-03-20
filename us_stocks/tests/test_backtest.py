@@ -6,7 +6,7 @@ import pandas as pd
 
 import invest_ai_core.performance as shared_performance
 from us_invest_ai.backtest import build_summary, run_backtest
-from us_invest_ai.config import RiskConfig
+from us_invest_ai.config import BacktestConfig, RiskConfig
 
 
 class BacktestTests(unittest.TestCase):
@@ -78,6 +78,42 @@ class BacktestTests(unittest.TestCase):
         self.assertIn("information_ratio", summary.columns)
         self.assertIn("tracking_error", summary.columns)
         self.assertGreater(float(summary.loc[0, "downside_volatility"]), 0.0)
+
+    def test_backtest_tracks_spread_and_market_impact_costs(self) -> None:
+        prices = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2025-01-01", "2025-01-02", "2025-01-03"]),
+                "ticker": ["AAA", "AAA", "AAA"],
+                "close": [100.0, 110.0, 110.0],
+                "volume": [1_000.0, 1_000.0, 1_000.0],
+            }
+        )
+        weights = pd.DataFrame(
+            {"AAA": [1.0, 1.0, 0.0]},
+            index=pd.to_datetime(["2025-01-01", "2025-01-02", "2025-01-03"]),
+        )
+
+        result = run_backtest(
+            prices,
+            weights,
+            backtest_config=BacktestConfig(
+                transaction_cost_bps=10.0,
+                spread_cost_bps=5.0,
+                market_impact_bps=20.0,
+                market_impact_exponent=1.0,
+                liquidity_lookback_days=1,
+            ),
+        )
+
+        self.assertAlmostEqual(result.gross_daily_returns.iloc[0], 0.0)
+        self.assertAlmostEqual(result.gross_daily_returns.iloc[1], 0.10)
+        self.assertAlmostEqual(result.linear_costs.iloc[0], 0.001)
+        self.assertAlmostEqual(result.spread_costs.iloc[0], 0.0005)
+        self.assertAlmostEqual(result.market_impact_costs.iloc[0], 0.002)
+        self.assertAlmostEqual(result.max_participation_rate.iloc[0], 1.0)
+        self.assertIn("gross_total_return", result.summary.columns)
+        self.assertIn("avg_daily_total_cost", result.summary.columns)
+        self.assertGreater(float(result.summary.loc[0, "cost_drag_total_return"]), 0.0)
 
 
 if __name__ == "__main__":

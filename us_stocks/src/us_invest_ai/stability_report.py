@@ -342,7 +342,7 @@ def main() -> None:
     baseline_result = run_backtest(
         prices=prices,
         target_weights=baseline_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -364,7 +364,7 @@ def main() -> None:
     ridge_result = run_backtest(
         prices=prices,
         target_weights=ridge_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -390,7 +390,7 @@ def main() -> None:
     tree_result = run_backtest(
         prices=prices,
         target_weights=tree_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -417,7 +417,7 @@ def main() -> None:
     mlp_result = run_backtest(
         prices=prices,
         target_weights=mlp_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -446,7 +446,7 @@ def main() -> None:
     tcn_result = run_backtest(
         prices=prices,
         target_weights=tcn_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -476,7 +476,7 @@ def main() -> None:
     hybrid_result = run_backtest(
         prices=prices,
         target_weights=hybrid_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -504,7 +504,7 @@ def main() -> None:
     lstm_result = run_backtest(
         prices=prices,
         target_weights=lstm_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -529,7 +529,7 @@ def main() -> None:
     transformer_result = run_backtest(
         prices=prices,
         target_weights=transformer_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )

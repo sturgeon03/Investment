@@ -8,6 +8,7 @@ import pandas as pd
 
 from invest_ai_core.artifacts import DataFrameArtifact, write_manifest_with_outputs
 from invest_ai_core.backtest import BacktestResult, run_backtest
+from invest_ai_core.config import BacktestConfig
 from invest_ai_core.manifest import sha256_file, sha256_payload
 from invest_ai_core.runtime import ResearchArtifactBundle, write_research_artifact_bundle
 from kr_invest_ai.data_bundle import KRResearchDataRequest
@@ -28,6 +29,26 @@ class KRResearchRun:
     manifest: dict[str, Any]
 
 
+def _resolve_backtest_config(
+    *,
+    transaction_cost_bps: float,
+    spread_cost_bps: float,
+    market_impact_bps: float,
+    market_impact_exponent: float,
+    liquidity_lookback_days: int,
+    backtest_config: BacktestConfig | None,
+) -> BacktestConfig:
+    if backtest_config is not None:
+        return backtest_config
+    return BacktestConfig(
+        transaction_cost_bps=transaction_cost_bps,
+        spread_cost_bps=spread_cost_bps,
+        market_impact_bps=market_impact_bps,
+        market_impact_exponent=market_impact_exponent,
+        liquidity_lookback_days=liquidity_lookback_days,
+    )
+
+
 def run_kr_research_backtest(
     prices: pd.DataFrame,
     benchmark_prices: pd.DataFrame | None,
@@ -35,19 +56,40 @@ def run_kr_research_backtest(
     *,
     strategy_config: KRStrategyConfig | None = None,
     transaction_cost_bps: float = 10.0,
+    spread_cost_bps: float = 0.0,
+    market_impact_bps: float = 0.0,
+    market_impact_exponent: float = 0.5,
+    liquidity_lookback_days: int = 20,
+    backtest_config: BacktestConfig | None = None,
 ) -> KRResearchRun:
     resolved_strategy = strategy_config or KRStrategyConfig()
+    resolved_backtest = _resolve_backtest_config(
+        transaction_cost_bps=transaction_cost_bps,
+        spread_cost_bps=spread_cost_bps,
+        market_impact_bps=market_impact_bps,
+        market_impact_exponent=market_impact_exponent,
+        liquidity_lookback_days=liquidity_lookback_days,
+        backtest_config=backtest_config,
+    )
     features = build_kr_feature_frame(prices, filings, benchmark_prices=benchmark_prices)
     target_weights, ranking_history = generate_target_weights(features, resolved_strategy)
     backtest_result = run_backtest(
         prices=prices,
         target_weights=target_weights,
-        transaction_cost_bps=transaction_cost_bps,
+        transaction_cost_bps=resolved_backtest.transaction_cost_bps,
         benchmark_prices=benchmark_prices,
+        spread_cost_bps=resolved_backtest.spread_cost_bps,
+        market_impact_bps=resolved_backtest.market_impact_bps,
+        market_impact_exponent=resolved_backtest.market_impact_exponent,
+        liquidity_lookback_days=resolved_backtest.liquidity_lookback_days,
     )
     manifest = {
         "pipeline": "kr_research_backtest",
-        "transaction_cost_bps": transaction_cost_bps,
+        "transaction_cost_bps": resolved_backtest.transaction_cost_bps,
+        "spread_cost_bps": resolved_backtest.spread_cost_bps,
+        "market_impact_bps": resolved_backtest.market_impact_bps,
+        "market_impact_exponent": resolved_backtest.market_impact_exponent,
+        "liquidity_lookback_days": resolved_backtest.liquidity_lookback_days,
         "strategy_config": asdict(resolved_strategy),
         "feature_rows": len(features),
         "rebalance_rows": int(ranking_history["selected"].fillna(False).sum()) if "selected" in ranking_history else 0,
@@ -72,6 +114,11 @@ def run_kr_research_pipeline(
     use_dart: bool = False,
     strategy_config: KRStrategyConfig | None = None,
     transaction_cost_bps: float = 10.0,
+    spread_cost_bps: float = 0.0,
+    market_impact_bps: float = 0.0,
+    market_impact_exponent: float = 0.5,
+    liquidity_lookback_days: int = 20,
+    backtest_config: BacktestConfig | None = None,
 ) -> KRResearchRun:
     from kr_invest_ai.dart_client import DARTOpenAPIClient
 
@@ -89,6 +136,11 @@ def run_kr_research_pipeline(
         raw_run.bundle.filings,
         strategy_config=strategy_config,
         transaction_cost_bps=transaction_cost_bps,
+        spread_cost_bps=spread_cost_bps,
+        market_impact_bps=market_impact_bps,
+        market_impact_exponent=market_impact_exponent,
+        liquidity_lookback_days=liquidity_lookback_days,
+        backtest_config=backtest_config,
     )
     research_run.raw_run = raw_run
     research_run.manifest.update(

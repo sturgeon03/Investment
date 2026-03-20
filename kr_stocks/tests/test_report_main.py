@@ -144,6 +144,8 @@ class KRReportMainCLITests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["pipeline"], "kr_report_compare")
             self.assertEqual(manifest["benchmark_ticker"], "069500")
+            self.assertEqual(manifest["spread_cost_bps"], 0.0)
+            self.assertEqual(manifest["market_impact_bps"], 0.0)
             summary = pd.read_csv(summary_path)
             self.assertEqual(set(summary["model_name"]), {"kr_rules_baseline", "kr_ridge_walkforward"})
             self.assertIn("avg_train_sample_count", summary.columns)

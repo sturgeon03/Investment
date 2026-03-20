@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from datetime import date
 
+from invest_ai_core.config import BacktestConfig
 from kr_invest_ai.data_bundle import KRResearchDataRequest
 from kr_invest_ai.research import run_kr_research_pipeline, save_kr_research_outputs
 from kr_invest_ai.strategy import KRStrategyConfig
@@ -28,6 +29,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--use-dart", action="store_true", help="Enable DART fetch when corp codes and dates are provided.")
     parser.add_argument("--top-n", type=int, default=3, help="Number of names held per rebalance.")
     parser.add_argument("--transaction-cost-bps", type=float, default=10.0, help="Transaction cost in basis points.")
+    parser.add_argument("--spread-cost-bps", type=float, default=0.0, help="Half-spread cost in basis points.")
+    parser.add_argument("--market-impact-bps", type=float, default=0.0, help="Participation-scaled market impact in basis points.")
+    parser.add_argument("--market-impact-exponent", type=float, default=0.5, help="Exponent applied to participation when scaling market impact.")
+    parser.add_argument("--liquidity-lookback-days", type=int, default=20, help="Rolling lookback used to estimate tradable dollar volume.")
     return parser.parse_args()
 
 
@@ -47,7 +52,13 @@ def main() -> None:
         corp_code_map_csv=args.corp_code_map_csv,
         use_dart=args.use_dart,
         strategy_config=KRStrategyConfig(top_n=args.top_n),
-        transaction_cost_bps=args.transaction_cost_bps,
+        backtest_config=BacktestConfig(
+            transaction_cost_bps=args.transaction_cost_bps,
+            spread_cost_bps=args.spread_cost_bps,
+            market_impact_bps=args.market_impact_bps,
+            market_impact_exponent=args.market_impact_exponent,
+            liquidity_lookback_days=args.liquidity_lookback_days,
+        ),
     )
     output_dir = save_kr_research_outputs(run, output_dir=args.artifacts_dir)
 

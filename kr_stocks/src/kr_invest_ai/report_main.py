@@ -9,6 +9,7 @@ import pandas as pd
 from invest_ai_core.artifacts import DataFrameArtifact, ensure_output_dir, write_dataframe_artifacts, write_manifest_with_outputs
 from invest_ai_core.evaluation import build_backtest_evaluation_row, evaluate_backtest_window
 from invest_ai_core.reporting import build_evaluation_row, build_svg_chart, compute_signal_metrics
+from invest_ai_core.config import BacktestConfig
 from kr_invest_ai.data_bundle import KRResearchDataRequest
 from kr_invest_ai.ml_strategy import KRMLModelConfig, generate_ridge_walkforward_target_weights
 from kr_invest_ai.research import run_kr_research_pipeline
@@ -36,6 +37,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--use-dart", action="store_true")
     parser.add_argument("--top-n", type=int, default=3)
     parser.add_argument("--transaction-cost-bps", type=float, default=10.0)
+    parser.add_argument("--spread-cost-bps", type=float, default=0.0)
+    parser.add_argument("--market-impact-bps", type=float, default=0.0)
+    parser.add_argument("--market-impact-exponent", type=float, default=0.5)
+    parser.add_argument("--liquidity-lookback-days", type=int, default=20)
     parser.add_argument("--label-horizon-days", type=int, default=20)
     parser.add_argument("--ridge-alpha", type=float, default=8.0)
     parser.add_argument("--min-training-samples", type=int, default=60)
@@ -44,6 +49,13 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+    backtest_config = BacktestConfig(
+        transaction_cost_bps=args.transaction_cost_bps,
+        spread_cost_bps=args.spread_cost_bps,
+        market_impact_bps=args.market_impact_bps,
+        market_impact_exponent=args.market_impact_exponent,
+        liquidity_lookback_days=args.liquidity_lookback_days,
+    )
     request = KRResearchDataRequest(
         tickers=tuple(args.tickers),
         price_start_date=date.fromisoformat(args.price_start_date),
@@ -58,7 +70,7 @@ def main() -> None:
         corp_code_map_csv=args.corp_code_map_csv,
         use_dart=args.use_dart,
         strategy_config=KRStrategyConfig(top_n=args.top_n),
-        transaction_cost_bps=args.transaction_cost_bps,
+        backtest_config=backtest_config,
     )
 
     ridge_weights, ridge_history = generate_ridge_walkforward_target_weights(
@@ -73,8 +85,12 @@ def main() -> None:
     ridge_result = run_backtest(
         prices=research_run.prices,
         target_weights=ridge_weights,
-        transaction_cost_bps=args.transaction_cost_bps,
+        transaction_cost_bps=backtest_config.transaction_cost_bps,
         benchmark_prices=research_run.benchmark_prices if not research_run.benchmark_prices.empty else None,
+        spread_cost_bps=backtest_config.spread_cost_bps,
+        market_impact_bps=backtest_config.market_impact_bps,
+        market_impact_exponent=backtest_config.market_impact_exponent,
+        liquidity_lookback_days=backtest_config.liquidity_lookback_days,
     )
 
     rules_eval = evaluate_backtest_window(
@@ -145,7 +161,11 @@ def main() -> None:
         {
             "pipeline": "kr_report_compare",
             "benchmark_ticker": request.benchmark_ticker,
-            "transaction_cost_bps": args.transaction_cost_bps,
+            "transaction_cost_bps": backtest_config.transaction_cost_bps,
+            "spread_cost_bps": backtest_config.spread_cost_bps,
+            "market_impact_bps": backtest_config.market_impact_bps,
+            "market_impact_exponent": backtest_config.market_impact_exponent,
+            "liquidity_lookback_days": backtest_config.liquidity_lookback_days,
             "label_horizon_days": args.label_horizon_days,
             "ridge_alpha": args.ridge_alpha,
             "min_training_samples": args.min_training_samples,

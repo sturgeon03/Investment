@@ -41,6 +41,10 @@ class EligibilityConfig:
 @dataclass(slots=True)
 class BacktestConfig:
     transaction_cost_bps: float
+    spread_cost_bps: float = 0.0
+    market_impact_bps: float = 0.0
+    market_impact_exponent: float = 0.5
+    liquidity_lookback_days: int = 20
 
 
 @dataclass(slots=True)
@@ -194,7 +198,14 @@ def load_config(config_path: str | Path) -> RunConfig:
         min_dollar_volume_20=float(payload.get("eligibility", {}).get("min_dollar_volume_20", 0.0)),
         min_universe_age_days=int(payload.get("eligibility", {}).get("min_universe_age_days", 0)),
     )
-    backtest = BacktestConfig(**payload["backtest"])
+    backtest_payload = payload["backtest"]
+    backtest = BacktestConfig(
+        transaction_cost_bps=float(backtest_payload["transaction_cost_bps"]),
+        spread_cost_bps=float(backtest_payload.get("spread_cost_bps", 0.0)),
+        market_impact_bps=float(backtest_payload.get("market_impact_bps", 0.0)),
+        market_impact_exponent=float(backtest_payload.get("market_impact_exponent", 0.5)),
+        liquidity_lookback_days=int(backtest_payload.get("liquidity_lookback_days", 20)),
+    )
     llm = LLMConfig(
         enabled=payload["llm"]["enabled"],
         signal_path=_resolve_path(project_root, payload["llm"]["signal_path"]),

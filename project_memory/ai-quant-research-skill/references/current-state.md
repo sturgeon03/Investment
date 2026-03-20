@@ -12,8 +12,9 @@ The repo is organized by market:
 Operational note:
 
 - the repo now has a local `.venv` at the root with the research dependencies installed
-- local verification currently passes with `86` US tests and `41` KR tests in that environment
+- local verification currently passes with `88` US tests and `41` KR tests in that environment
 - the US lane now also has `us_stocks/scripts/run_overnight_quant.ps1` plus `us_invest_ai.refresh_market_data`, giving the automation a single-writer overnight path that refreshes canonical market data, writes a refresh manifest, runs the promoted report stack into timestamped output directories, and appends a structured run ledger under `us_stocks/automation/`
+- the shared backtest layer now supports execution-realism controls beyond fixed bps costs via spread, participation-scaled market impact, and liquidity lookback inputs, and both the US and KR lanes now expose that surface
 
 The US project already includes:
 
@@ -78,6 +79,38 @@ Interpretation:
 - tree remains the strongest non-transformer learned baseline on repeated windows
 - the latest rerun keeps the core conclusion intact: the repo now has credible positive AI-alpha evidence in the transformer lane, but it still depends on free-approx universe history and backtest assumptions
 - the repo also now has a working overnight single-writer path that refreshes canonical market data, reruns the promoted report stack, records a structured ledger, and can safely promote successful timestamped outputs into the canonical tracked artifact directories
+
+### Execution-realistic follow-up on the promoted dynamic lane
+
+Most recent stricter execution-cost rerun completed on `2026-03-20` using `soft_price_large_cap_60_dynamic_eligibility_execution_realistic.yaml` with:
+
+- transaction cost: `10 bps`
+- spread cost: `5 bps`
+- market impact: `15 bps * participation^0.5`
+- liquidity lookback: `20 trading days`
+
+Dynamic 60-name plus eligibility lane under these stricter costs:
+
+- latest 1-year OOS ending capital:
+  transformer about `$126,767`
+  MLP about `$116,530`
+  ridge about `$115,890`
+  baseline about `$115,366`
+  tree about `$112,568`
+- repeated 4-window average ending capital:
+  transformer about `$119,278`
+  tree about `$117,991`
+  baseline about `$114,138`
+  ridge about `$112,238`
+  MLP about `$111,712`
+
+Interpretation:
+
+- the promoted transformer remains the strongest model on both the latest 1-year slice and the repeated-window average even after adding spread and liquidity-scaled market impact
+- the stricter execution assumptions reduce latest-year ending capital by roughly `$700-$800` across the main models and reduce repeated-window average ending capital by roughly the same order of magnitude
+- the ranking does not change: transformer still leads, tree remains the strongest non-transformer repeated-window learned baseline, and the baseline still trails both transformer and tree on the repeated-window average
+- realized participation stays tiny in the promoted US lane, so the main drag comes from linear plus spread costs rather than from large simulated market-impact penalties
+- this moves the next bottleneck further away from naive execution-cost assumptions and back toward data realism, constituent history, and continued sequence-model hardening
 
 ### Rule-based / heuristic side
 

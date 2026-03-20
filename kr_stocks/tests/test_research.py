@@ -62,14 +62,26 @@ class KRResearchTests(unittest.TestCase):
             [{"date": current_date, "ticker": "069500.KS", "close": 100.0 + idx} for idx, current_date in enumerate(dates)]
         )
 
-        run = run_kr_research_backtest(prices, benchmark, filings, transaction_cost_bps=5.0)
+        run = run_kr_research_backtest(
+            prices,
+            benchmark,
+            filings,
+            transaction_cost_bps=5.0,
+            spread_cost_bps=3.0,
+            market_impact_bps=8.0,
+            liquidity_lookback_days=10,
+        )
 
         self.assertFalse(run.features.empty)
         self.assertIn("rel_ret_20", run.features.columns)
         self.assertIn("benchmark_ret_20", run.features.columns)
         self.assertFalse(run.target_weights.empty)
         self.assertIn("cagr", run.backtest_result.summary.columns)
+        self.assertIn("avg_daily_total_cost", run.backtest_result.summary.columns)
         self.assertFalse(run.benchmark_prices.empty)
+        self.assertEqual(run.manifest["spread_cost_bps"], 3.0)
+        self.assertEqual(run.manifest["market_impact_bps"], 8.0)
+        self.assertEqual(run.manifest["liquidity_lookback_days"], 10)
 
     def test_save_kr_research_outputs_writes_manifest(self) -> None:
         prices = pd.DataFrame(

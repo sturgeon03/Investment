@@ -70,7 +70,7 @@ def run_research_pipeline(config: RunConfig) -> ResearchRun:
     backtest_result = run_backtest(
         prices=market_data.prices,
         target_weights=target_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=market_data.benchmark_prices,
         risk_config=config.risk,
     )

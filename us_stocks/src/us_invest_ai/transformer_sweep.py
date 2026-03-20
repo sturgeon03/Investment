@@ -254,7 +254,7 @@ def main() -> None:
     baseline_result = run_backtest(
         prices=prices,
         target_weights=baseline_weights,
-        transaction_cost_bps=config.backtest.transaction_cost_bps,
+        backtest_config=config.backtest,
         benchmark_prices=benchmark_prices,
         risk_config=config.risk,
     )
@@ -305,7 +305,7 @@ def main() -> None:
                     result = run_backtest(
                         prices=prices,
                         target_weights=weights,
-                        transaction_cost_bps=config.backtest.transaction_cost_bps,
+                        backtest_config=config.backtest,
                         benchmark_prices=benchmark_prices,
                         risk_config=config.risk,
                     )

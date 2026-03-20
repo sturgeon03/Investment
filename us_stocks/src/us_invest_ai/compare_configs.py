@@ -7,8 +7,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from invest_ai_core.evaluation import evaluate_backtest_window
 from invest_ai_core.reporting import compute_signal_metrics
-from us_invest_ai.backtest import build_summary, run_backtest
+from us_invest_ai.backtest import run_backtest
 from us_invest_ai.config import DataConfig, EligibilityConfig, load_config
 from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.experiment_manifest import attach_output_files, build_run_manifest, save_manifest
@@ -62,14 +63,11 @@ def _slice_result(result, eval_start: str | None) -> pd.DataFrame:
     if not eval_start:
         return result.summary.copy()
 
-    start = pd.Timestamp(eval_start)
-    strategy_returns = result.daily_returns.loc[result.daily_returns.index >= start]
-    turnover = result.turnover.reindex(strategy_returns.index)
-    benchmark_returns = None
-    if result.benchmark_returns is not None:
-        benchmark_returns = result.benchmark_returns.reindex(strategy_returns.index)
-
-    return build_summary(strategy_returns, turnover, benchmark_returns)
+    return evaluate_backtest_window(
+        result,
+        pd.Timestamp(eval_start),
+        initial_capital=100_000.0,
+    ).summary
 
 
 def _slice_ranking_history(ranking_history: pd.DataFrame, eval_start: str | None) -> pd.DataFrame:
@@ -166,7 +164,7 @@ def main() -> None:
         result = run_backtest(
             prices=prices,
             target_weights=weights,
-            transaction_cost_bps=config.backtest.transaction_cost_bps,
+            backtest_config=config.backtest,
             benchmark_prices=benchmark_prices,
             risk_config=config.risk,
         )

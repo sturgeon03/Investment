@@ -39,6 +39,10 @@ strategy:
   llm_weight: 0.30
 backtest:
   transaction_cost_bps: 10.0
+  spread_cost_bps: 4.0
+  market_impact_bps: 12.0
+  market_impact_exponent: 0.7
+  liquidity_lookback_days: 15
 llm:
   enabled: true
   signal_path: signals/llm_scores.generated.csv
@@ -81,6 +85,11 @@ output:
             config = load_config(config_path)
 
         self.assertEqual(config.config_path, config_path.resolve())
+        self.assertEqual(config.backtest.transaction_cost_bps, 10.0)
+        self.assertEqual(config.backtest.spread_cost_bps, 4.0)
+        self.assertEqual(config.backtest.market_impact_bps, 12.0)
+        self.assertEqual(config.backtest.market_impact_exponent, 0.7)
+        self.assertEqual(config.backtest.liquidity_lookback_days, 15)
         self.assertEqual(config.scoring.provider, "openai-compatible")
         self.assertEqual(config.scoring.timeout_seconds, 45)
         self.assertEqual(config.scoring.env_file, env_path)

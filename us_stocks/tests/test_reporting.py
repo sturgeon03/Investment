@@ -21,6 +21,11 @@ class ReportingCoreTests(unittest.TestCase):
             self.daily_returns = pd.Series([0.0, 0.10, -0.05], index=index)
             self.turnover = pd.Series([1.0, 0.2, 0.1], index=index)
             self.benchmark_returns = pd.Series([0.0, 0.02, 0.01], index=index)
+            self.gross_daily_returns = pd.Series([0.0, 0.11, -0.04], index=index)
+            self.linear_costs = pd.Series([0.001, 0.001, 0.001], index=index)
+            self.spread_costs = pd.Series([0.0005, 0.0005, 0.0005], index=index)
+            self.market_impact_costs = pd.Series([0.002, 0.001, 0.0], index=index)
+            self.max_participation_rate = pd.Series([0.8, 0.4, 0.0], index=index)
 
     def test_shared_value_curve_is_compatible_with_us_wrapper(self) -> None:
         self.assertIs(shared_reporting.build_value_curve, _build_value_curve)
@@ -155,6 +160,9 @@ class ReportingCoreTests(unittest.TestCase):
 
         self.assertEqual(len(evaluation.returns), 2)
         self.assertIn("sharpe", evaluation.summary.columns)
+        self.assertIn("avg_daily_spread_cost", evaluation.summary.columns)
+        self.assertIn("avg_daily_market_impact_cost", evaluation.summary.columns)
+        self.assertIn("avg_daily_max_participation_rate", evaluation.summary.columns)
         self.assertEqual(list(evaluation.curve.columns), ["date", "strategy_value", "benchmark_value"])
 
     def test_build_backtest_evaluation_row_uses_requested_window(self) -> None:

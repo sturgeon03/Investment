@@ -13,12 +13,13 @@ from invest_ai_core.artifacts import (
     write_dataframe_artifacts,
     write_manifest_with_outputs,
 )
+from invest_ai_core.evaluation import evaluate_backtest_window
 from invest_ai_core.reporting import (
     build_svg_chart,
     build_value_curve as _build_value_curve,
     compute_signal_metrics,
 )
-from us_invest_ai.backtest import build_summary, run_backtest
+from us_invest_ai.backtest import run_backtest
 from us_invest_ai.config import DataConfig, EligibilityConfig, load_config
 from us_invest_ai.data import prepare_market_data_bundle
 from us_invest_ai.experiment_manifest import build_run_manifest
@@ -183,28 +184,26 @@ def main() -> None:
         result = run_backtest(
             prices=prices,
             target_weights=weights,
-            transaction_cost_bps=config.backtest.transaction_cost_bps,
+            backtest_config=config.backtest,
             benchmark_prices=benchmark_prices,
             risk_config=config.risk,
         )
 
-        strategy_returns = result.daily_returns.loc[result.daily_returns.index >= requested_eval_start]
-        turnover = result.turnover.reindex(strategy_returns.index)
-        benchmark_returns = None
-        if result.benchmark_returns is not None:
-            benchmark_returns = result.benchmark_returns.reindex(strategy_returns.index)
-
         ranking_slice = _slice_ranking_history(ranking_history, requested_eval_start)
-        summary = build_summary(strategy_returns, turnover, benchmark_returns)
-        actual_eval_start = pd.to_datetime(strategy_returns.index.min()).normalize()
-        actual_eval_end = pd.to_datetime(strategy_returns.index.max()).normalize()
+        evaluation = evaluate_backtest_window(
+            result,
+            requested_eval_start,
+            initial_capital=args.initial_capital,
+        )
+        actual_eval_start = pd.to_datetime(evaluation.returns.index.min()).normalize()
+        actual_eval_end = pd.to_datetime(evaluation.returns.index.max()).normalize()
         runs.append(
             {
                 "config_name": Path(str(config_path)).stem,
                 "config_path": str(Path(str(config_path))),
-                "summary": summary,
+                "summary": evaluation.summary,
                 "ranking_history": ranking_slice,
-                "value_curve": _build_value_curve(strategy_returns, benchmark_returns, args.initial_capital),
+                "value_curve": evaluation.curve,
                 "eval_start": actual_eval_start,
                 "eval_end": actual_eval_end,
             }

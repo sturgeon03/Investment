@@ -5,6 +5,7 @@ from typing import Protocol
 
 import pandas as pd
 
+from invest_ai_core.backtest import enrich_summary_with_execution_details
 from invest_ai_core.performance import build_summary
 from invest_ai_core.reporting import build_evaluation_row, build_value_curve
 
@@ -44,6 +45,35 @@ def evaluate_backtest_window(
         else None
     )
     summary = build_summary(returns, turnover, benchmark_returns)
+    summary = enrich_summary_with_execution_details(
+        summary,
+        net_returns=returns,
+        gross_returns=(
+            result.gross_daily_returns.reindex(returns.index)
+            if getattr(result, "gross_daily_returns", None) is not None
+            else None
+        ),
+        linear_costs=(
+            result.linear_costs.reindex(returns.index)
+            if getattr(result, "linear_costs", None) is not None
+            else None
+        ),
+        spread_costs=(
+            result.spread_costs.reindex(returns.index)
+            if getattr(result, "spread_costs", None) is not None
+            else None
+        ),
+        market_impact_costs=(
+            result.market_impact_costs.reindex(returns.index)
+            if getattr(result, "market_impact_costs", None) is not None
+            else None
+        ),
+        max_participation_rate=(
+            result.max_participation_rate.reindex(returns.index)
+            if getattr(result, "max_participation_rate", None) is not None
+            else None
+        ),
+    )
     curve = build_value_curve(returns, benchmark_returns, initial_capital)
     return WindowEvaluation(
         returns=returns,
