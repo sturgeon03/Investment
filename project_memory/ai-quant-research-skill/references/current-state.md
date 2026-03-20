@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-19
+Last updated: 2026-03-20
 
 ## Repository Status
 
@@ -8,6 +8,12 @@ The repo is organized by market:
 
 - `us_stocks/`: active research pipeline
 - `kr_stocks/`: executable Korea-market research scaffold with a first cacheable raw-data pipeline, monthly rules lane, benchmark-aware feature frame, and first rules-vs-walk-forward-ridge comparison path
+
+Operational note:
+
+- the repo now has a local `.venv` at the root with the research dependencies installed
+- local verification currently passes with `86` US tests and `41` KR tests in that environment
+- the US lane now also has `us_stocks/scripts/run_overnight_quant.ps1` plus `us_invest_ai.refresh_market_data`, giving the automation a single-writer overnight path that refreshes canonical market data, writes a refresh manifest, runs the promoted report stack into timestamped output directories, and appends a structured run ledger under `us_stocks/automation/`
 
 The US project already includes:
 
@@ -46,6 +52,32 @@ It is not yet:
 - a validated deep learning alpha engine
 
 ## Latest Verified Findings
+
+### Latest canonical overnight rerun
+
+Most recent dependency-complete rerun completed on `2026-03-20` using refreshed market data through `2026-03-19`.
+
+Dynamic 60-name plus eligibility lane:
+
+- latest 1-year OOS ending capital:
+  transformer about `$127,520`
+  MLP about `$117,307`
+  ridge about `$116,593`
+  baseline about `$116,168`
+  tree about `$113,267`
+- repeated 4-window average ending capital:
+  transformer about `$120,013`
+  tree about `$118,691`
+  baseline about `$114,890`
+  ridge about `$112,974`
+  MLP about `$112,468`
+
+Interpretation:
+
+- the promoted clipped-objective transformer remains the strongest learned model on both the latest 1-year slice and the repeated-window average in the stricter dynamic lane
+- tree remains the strongest non-transformer learned baseline on repeated windows
+- the latest rerun keeps the core conclusion intact: the repo now has credible positive AI-alpha evidence in the transformer lane, but it still depends on free-approx universe history and backtest assumptions
+- the repo also now has a working overnight single-writer path that refreshes canonical market data, reruns the promoted report stack, records a structured ledger, and can safely promote successful timestamped outputs into the canonical tracked artifact directories
 
 ### Rule-based / heuristic side
 

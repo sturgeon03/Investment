@@ -2,15 +2,15 @@
   "benchmark_file": {
     "exists": true,
     "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\benchmark.csv",
-    "sha256": "d057df8afc54ea497b1190404e5b6fe603043d47996e930225f3b08904ca25c7"
+    "sha256": "df63d1d4bc6280abeae11663873d3cfc9ba054a4aa54ecc4c85c0a84f8b9c5a5"
   },
   "benchmark_summary": {
-    "end_date": "2026-03-17",
-    "rows": 2062,
+    "end_date": "2026-03-19",
+    "rows": 2064,
     "start_date": "2018-01-02",
     "ticker_count": 1
   },
-  "generated_at_utc": "2026-03-19T06:20:13.024277+00:00",
+  "generated_at_utc": "2026-03-19T20:30:20.286434+00:00",
   "inputs": {
     "metadata_file": {
       "exists": true,
@@ -32,11 +32,11 @@
   "prices_file": {
     "exists": true,
     "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\prices.csv",
-    "sha256": "a2b82f9c6c17f27f612c1df8688e1ac6bb64f47abfff52a8f11bac0f1c731a7b"
+    "sha256": "e44e16c1b736dfe277f0f3db287216a1ff6bf7839caa675fa6df7ee2d1e9e830"
   },
   "prices_summary": {
-    "end_date": "2026-03-17",
-    "rows": 123720,
+    "end_date": "2026-03-19",
+    "rows": 123840,
     "start_date": "2018-01-02",
     "ticker_count": 60
   },

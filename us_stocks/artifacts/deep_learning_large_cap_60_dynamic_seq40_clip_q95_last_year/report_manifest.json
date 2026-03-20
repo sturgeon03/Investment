@@ -142,12 +142,12 @@
     "hidden_dim": 32,
     "hybrid_static_hidden_dim": 16,
     "label_horizon_days": 20,
-    "latest_market_date": "2026-03-17",
+    "latest_market_date": "2026-03-19",
     "learning_rate": 0.01,
     "lookback_days": 365,
     "lstm_hidden_dim": 12,
     "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
-    "market_data_manifest_sha256": "28a19ab3df3f8179b9d88342e2cdd97542e12b392c3788882f2b291122516ed0",
+    "market_data_manifest_sha256": "24fd616b02de86ecc961898434bd1dfae5e469b1b3935570b5317ad3f4ba722d",
     "market_data_source": "cache",
     "max_epochs": 250,
     "min_training_samples": 252,
@@ -175,10 +175,10 @@
     "validation_window_days": 60,
     "weight_decay": 0.0001
   },
-  "generated_at_utc": "2026-03-19T06:10:15.060995+00:00",
+  "generated_at_utc": "2026-03-19T20:30:17.300065+00:00",
   "git": {
     "branch": "main",
-    "commit": "128b3f05d979b902ad84adabdbb2c2a5f1ea0270",
+    "commit": "a3c59a9d256832035f931d391311f03d69b349c9",
     "dirty": true
   },
   "inputs": {
@@ -196,58 +196,58 @@
   "output_files": {
     "baseline_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\configured_baseline_history_last_year.csv",
-      "sha256": "0179068c2797530bf3ddd56a75e3dfc572e867a577f0fefcfdd268fb0710169d"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\configured_baseline_history_last_year.csv",
+      "sha256": "28051f62212fe082c63b31372e7ad5f0dcbcc19e62a166547f7da27307281626"
     },
     "chart": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_values_last_year.svg",
-      "sha256": "5bf9b252eab315e0c0a8c139276d405e1e9062023f71fdcc5a11f832a7e831cd"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_values_last_year.svg",
+      "sha256": "36f5d40a57cd98455856a636c247719e03e5bd80d44f375a15619b1ea7fa919b"
     },
     "hybrid_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\hybrid_sequence_walkforward_history_last_year.csv",
-      "sha256": "bd390262e2b97b9aea48d5e31ffbf2002c81ba55f27defc5d81bc1b427334e5d"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\hybrid_sequence_walkforward_history_last_year.csv",
+      "sha256": "4e1124bbdc4d8e6c00faf61c0fd3278f877ff2884cb9d82bf2c0abd86a7b7e8e"
     },
     "lstm_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\lstm_walkforward_history_last_year.csv",
-      "sha256": "9842cf30d19e1018be098bee1b4f2f7dade8c77cd7bd8928285494583c99d537"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\lstm_walkforward_history_last_year.csv",
+      "sha256": "a74508027ed87d301f166372f521d44e8980ef9731acd1583a8fc02a33cd3a4b"
     },
     "mlp_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\mlp_walkforward_history_last_year.csv",
-      "sha256": "715bb662f5da1df72e46613a551f783e6fdf047587cbbb46a11df139bff10c25"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\mlp_walkforward_history_last_year.csv",
+      "sha256": "2582340c05adde79e3ccaf33df1c86575bc62b70255041deb867d4c419d28688"
     },
     "ridge_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\ridge_walkforward_history_last_year.csv",
-      "sha256": "4cbe9fba6ac4f54c6c700d17885759280b08cf18d1e41b9cd12785b05853d33f"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\ridge_walkforward_history_last_year.csv",
+      "sha256": "350f429cdc27b74405c4d11cba259278dcb154f563a7922bb561c4ac67200701"
     },
     "summary": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_summary_last_year.csv",
-      "sha256": "d9688b4f062df9a28fae221814b01a322ced1bd8302736b59ca21e93e0f98b46"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_summary_last_year.csv",
+      "sha256": "56047c576d752f2534dd61463a941e924f4fd29c2c2eb0de3ab987c90a0dfcd3"
     },
     "tcn_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\tcn_walkforward_history_last_year.csv",
-      "sha256": "a3bfd587cf32d97d586414e6f81bdb5ffaeb8e4506bd145e644585ac6b074797"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\tcn_walkforward_history_last_year.csv",
+      "sha256": "1bdd7ccd57efffbe63be35528212a9a28209c02e38e6be747bb4a456994c15c3"
     },
     "transformer_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\transformer_walkforward_history_last_year.csv",
-      "sha256": "2142eaeca62b3994d8f1c3aec159f6434df9544fe47af076a5f8fb0164ba2334"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\transformer_walkforward_history_last_year.csv",
+      "sha256": "8c2753773cab972adaad65e11d9b1aff40c9328176ba88b9a5e3025e828d0705"
     },
     "tree_history": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\tree_walkforward_history_last_year.csv",
-      "sha256": "5d02890e780275f77881e0edf7f67e097a441ca670ca98b622687b4af5839378"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\tree_walkforward_history_last_year.csv",
+      "sha256": "2f16c80d29029c72a1387ba5a91df89132bd7942d0314f97c6d13c3871fabe1c"
     },
     "values": {
       "exists": true,
-      "path": "us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_values_last_year.csv",
-      "sha256": "a0a83168d124d610711befa557f1133cf72dbc5283ad14539dd93469b61c48df"
+      "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_values_last_year.csv",
+      "sha256": "2f02424bd5ce6b51b066fa4f3f5279b048f4d2dc7c8190fac19158cd1ea3126d"
     }
   },
   "project_root": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks"

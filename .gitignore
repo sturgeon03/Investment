@@ -201,6 +201,14 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Investment automation runtime state
+us_stocks/automation/latest_status.json
+us_stocks/automation/ledger/
+us_stocks/automation/launcher/
+us_stocks/automation/locks/
+us_stocks/automation/runs/
+us_stocks/data_large_cap_60_dynamic_eligibility/raw/refresh_run_manifest.json
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
