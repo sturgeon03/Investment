@@ -8,6 +8,10 @@ param(
     [string]$RunLabel = "scheduled",
     [string]$PaperBrokerBackend = "local",
     [string]$PaperBrokerEnvFile = "",
+    [string]$MaxPaperOrderCount = "",
+    [string]$MaxPaperTotalTradeNotional = "",
+    [string]$MaxPaperSingleOrderNotional = "",
+    [switch]$AllowDuplicatePaperSubmission,
     [switch]$ApplyPaperOrders,
     [switch]$SubmitPaperOrders
 )
@@ -19,6 +23,10 @@ $applySwitch = if ($ApplyPaperOrders) { " -ApplyPaperOrders" } else { "" }
 $submitSwitch = if ($SubmitPaperOrders) { " -SubmitPaperOrders" } else { "" }
 $backendArgs = if ($SubmitPaperOrders) { " -PaperBrokerBackend `"$PaperBrokerBackend`"" } else { "" }
 $envFileArgs = if ($PaperBrokerEnvFile) { " -PaperBrokerEnvFile `"$PaperBrokerEnvFile`"" } else { "" }
-$taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$ConfigPath`" -RepoRoot `"$RepoRoot`" -PythonExe `"$PythonExe`" -LogRoot `"$LogRoot`" -RunLabel `"$RunLabel`"$applySwitch$submitSwitch$backendArgs$envFileArgs"
+$maxOrderArgs = if ($MaxPaperOrderCount) { " -MaxPaperOrderCount `"$MaxPaperOrderCount`"" } else { "" }
+$maxTotalArgs = if ($MaxPaperTotalTradeNotional) { " -MaxPaperTotalTradeNotional `"$MaxPaperTotalTradeNotional`"" } else { "" }
+$maxSingleArgs = if ($MaxPaperSingleOrderNotional) { " -MaxPaperSingleOrderNotional `"$MaxPaperSingleOrderNotional`"" } else { "" }
+$duplicateArgs = if ($AllowDuplicatePaperSubmission) { " -AllowDuplicatePaperSubmission" } else { "" }
+$taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$ConfigPath`" -RepoRoot `"$RepoRoot`" -PythonExe `"$PythonExe`" -LogRoot `"$LogRoot`" -RunLabel `"$RunLabel`"$applySwitch$submitSwitch$backendArgs$envFileArgs$maxOrderArgs$maxTotalArgs$maxSingleArgs$duplicateArgs"
 
 schtasks /Create /SC DAILY /TN $TaskName /TR $taskCommand /ST $StartTime /F

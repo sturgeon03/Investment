@@ -42,6 +42,8 @@ def build_runtime_summary(latest_status_path: Path, market_data_manifest_path: P
     paper_market_date = status.get("latest_market_date")
     stale = bool(latest_market_date and latest_market_date != paper_market_date)
     paper_broker = status.get("paper_broker") or {}
+    paper_broker_guardrails = status.get("paper_broker_guardrails") or {}
+    paper_broker_reconciliation = status.get("paper_broker_reconciliation") or {}
 
     return {
         "status_exists": True,
@@ -60,6 +62,10 @@ def build_runtime_summary(latest_status_path: Path, market_data_manifest_path: P
         "paper_broker_fill_count": paper_broker.get("fill_count"),
         "paper_broker_cash": paper_broker.get("ending_cash"),
         "paper_broker_total_equity": paper_broker.get("ending_total_equity"),
+        "paper_broker_guardrail_violation_count": paper_broker_guardrails.get("violation_count"),
+        "paper_broker_ok_to_submit": paper_broker_guardrails.get("ok_to_submit"),
+        "paper_broker_reconciliation_ok": paper_broker_reconciliation.get("ok"),
+        "paper_broker_share_delta_count": paper_broker_reconciliation.get("share_delta_count"),
     }
 
 
@@ -102,6 +108,10 @@ def main() -> int:
     print(f"Paper broker fill count: {summary.get('paper_broker_fill_count')}")
     print(f"Paper broker ending cash: {summary.get('paper_broker_cash')}")
     print(f"Paper broker ending total equity: {summary.get('paper_broker_total_equity')}")
+    print(f"Paper broker guardrail violations: {summary.get('paper_broker_guardrail_violation_count')}")
+    print(f"Paper broker ok to submit: {summary.get('paper_broker_ok_to_submit')}")
+    print(f"Paper broker reconciliation ok: {summary.get('paper_broker_reconciliation_ok')}")
+    print(f"Paper broker share delta count: {summary.get('paper_broker_share_delta_count')}")
     print(f"Paper runtime stale: {summary['stale']}")
     if summary.get("run_directory"):
         print(f"Latest paper run: {summary['run_directory']}")

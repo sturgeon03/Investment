@@ -41,6 +41,14 @@ def test_build_runtime_summary_compares_paper_date_to_market_date() -> None:
                     "ending_cash": 1250.0,
                     "ending_total_equity": 100250.0,
                 },
+                "paper_broker_guardrails": {
+                    "violation_count": 0,
+                    "ok_to_submit": True,
+                },
+                "paper_broker_reconciliation": {
+                    "ok": True,
+                    "share_delta_count": 0,
+                },
                 "run_directory": "runs/20260326_010203",
                 "positions_path": "paper/current_positions.csv",
             }
@@ -62,3 +70,7 @@ def test_build_runtime_summary_compares_paper_date_to_market_date() -> None:
     assert summary["paper_broker_order_count"] == 2
     assert summary["paper_broker_fill_count"] == 2
     assert summary["paper_broker_cash"] == 1250.0
+    assert summary["paper_broker_guardrail_violation_count"] == 0
+    assert summary["paper_broker_ok_to_submit"] is True
+    assert summary["paper_broker_reconciliation_ok"] is True
+    assert summary["paper_broker_share_delta_count"] == 0

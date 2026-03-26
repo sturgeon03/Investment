@@ -9,6 +9,10 @@ param(
     [string]$PaperBrokerRoot = "",
     [string]$PaperBrokerBackend = "local",
     [string]$PaperBrokerEnvFile = "",
+    [Nullable[int]]$MaxPaperOrderCount = $null,
+    [Nullable[double]]$MaxPaperTotalTradeNotional = $null,
+    [Nullable[double]]$MaxPaperSingleOrderNotional = $null,
+    [switch]$AllowDuplicatePaperSubmission,
     [switch]$ApplyPaperOrders,
     [switch]$SubmitPaperOrders
 )
@@ -84,6 +88,18 @@ if ($PaperBrokerEnvFile) {
     $resolvedPaperBrokerEnvFile = [System.IO.Path]::GetFullPath($PaperBrokerEnvFile)
     $arguments += @("--paper-broker-env-file", $resolvedPaperBrokerEnvFile)
 }
+if ($MaxPaperOrderCount -ne $null) {
+    $arguments += @("--max-paper-order-count", [string]$MaxPaperOrderCount)
+}
+if ($MaxPaperTotalTradeNotional -ne $null) {
+    $arguments += @("--max-paper-total-trade-notional", [string]$MaxPaperTotalTradeNotional)
+}
+if ($MaxPaperSingleOrderNotional -ne $null) {
+    $arguments += @("--max-paper-single-order-notional", [string]$MaxPaperSingleOrderNotional)
+}
+if ($AllowDuplicatePaperSubmission) {
+    $arguments += "--allow-duplicate-paper-submission"
+}
 
 Write-Host "Repo root: $resolvedRepoRoot"
 Write-Host "Config: $resolvedConfigPath"
@@ -94,6 +110,15 @@ if ($PaperBrokerRoot) {
 }
 if ($SubmitPaperOrders) {
     Write-Host "Paper broker backend: $PaperBrokerBackend"
+}
+if ($MaxPaperOrderCount -ne $null) {
+    Write-Host "Max paper order count: $MaxPaperOrderCount"
+}
+if ($MaxPaperTotalTradeNotional -ne $null) {
+    Write-Host "Max paper total trade notional: $MaxPaperTotalTradeNotional"
+}
+if ($MaxPaperSingleOrderNotional -ne $null) {
+    Write-Host "Max paper single order notional: $MaxPaperSingleOrderNotional"
 }
 
 & $PythonExe @arguments 2>&1 | Tee-Object -FilePath $logPath

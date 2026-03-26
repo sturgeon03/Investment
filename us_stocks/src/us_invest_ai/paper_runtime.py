@@ -89,6 +89,12 @@ def _paper_broker_summary(paper_broker_outputs: dict[str, Any] | None) -> dict[s
     return summary
 
 
+def _normalize_optional_summary(summary: dict[str, Any] | None) -> dict[str, Any] | None:
+    if summary is None:
+        return None
+    return normalize_for_json(summary)
+
+
 def write_paper_runtime_state(
     *,
     run_dir: Path,
@@ -104,6 +110,8 @@ def write_paper_runtime_state(
     market_data_provenance: dict[str, Any] | None,
     workflow_manifest_path: Path,
     paper_broker_outputs: dict[str, Any] | None = None,
+    paper_broker_guardrails: dict[str, Any] | None = None,
+    paper_broker_reconciliation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     runtime_root = positions_path.parent / "runtime"
     ledger_path = runtime_root / "ledger" / "paper_run_ledger.jsonl"
@@ -119,12 +127,16 @@ def write_paper_runtime_state(
     save_table(current_positions_after_run, latest_positions_state_path)
 
     broker_summary = _paper_broker_summary(paper_broker_outputs)
+    broker_guardrails = _normalize_optional_summary(paper_broker_guardrails)
+    broker_reconciliation = _normalize_optional_summary(paper_broker_reconciliation)
     paper_state_advanced = bool(
         (apply_paper_orders and positions_path.exists())
         or (broker_summary and broker_summary.get("positions_updated"))
     )
     paper_state_bootstrapped = bool(paper_state_advanced and not positions_existed_before_run)
-    if broker_summary is not None:
+    if broker_guardrails is not None and not broker_guardrails.get("ok_to_submit", True):
+        state_mode = "broker_blocked"
+    elif broker_summary is not None:
         state_mode = "broker_submitted" if broker_summary.get("order_count_submitted", 0) > 0 else "broker_idle"
     else:
         state_mode = (
@@ -154,6 +166,8 @@ def write_paper_runtime_state(
             "recommended_orders": _orders_summary(recommended_orders),
             "current_positions_after_run": _positions_summary(current_positions_after_run),
             "paper_broker": broker_summary,
+            "paper_broker_guardrails": broker_guardrails,
+            "paper_broker_reconciliation": broker_reconciliation,
             "latest_runtime_files": {
                 "target_portfolio": str(latest_target_path),
                 "recommended_orders": str(latest_orders_path),
@@ -177,6 +191,9 @@ def write_paper_runtime_state(
                 ),
             },
             "next_recommended_action": (
+                "Resolve the broker guardrail violations before attempting another paper broker submission."
+                if broker_guardrails is not None and not broker_guardrails.get("ok_to_submit", True)
+                else
                 "Inspect the latest paper broker account and fill ledgers before promoting this flow toward a real broker adapter."
                 if broker_summary is not None
                 else "Inspect the latest recommended orders before promoting this paper flow toward broker-backed paper execution."

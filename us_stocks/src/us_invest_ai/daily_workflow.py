@@ -20,6 +20,15 @@ from us_invest_ai.llm_scoring import (
     score_documents,
 )
 from us_invest_ai.paper_broker_adapter import submit_orders_via_paper_broker_backend
+from us_invest_ai.paper_broker_guardrails import (
+    evaluate_paper_broker_guardrails,
+    save_paper_broker_guardrails,
+)
+from us_invest_ai.paper_broker_reconciliation import (
+    append_paper_broker_reconciliation_ledger,
+    reconcile_paper_broker_state,
+    save_paper_broker_reconciliation,
+)
 from us_invest_ai.paper_runtime import write_paper_runtime_state
 from us_invest_ai.pipeline import run_research_pipeline, save_research_outputs
 from us_invest_ai.portfolio import (
@@ -198,6 +207,29 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Optional transaction cost used by the paper broker fill simulator. Defaults to backtest.transaction_cost_bps.",
     )
+    parser.add_argument(
+        "--max-paper-order-count",
+        type=int,
+        default=None,
+        help="Optional guardrail that blocks broker submission when too many orders are generated.",
+    )
+    parser.add_argument(
+        "--max-paper-total-trade-notional",
+        type=float,
+        default=None,
+        help="Optional guardrail that blocks broker submission when total order notional is too large.",
+    )
+    parser.add_argument(
+        "--max-paper-single-order-notional",
+        type=float,
+        default=None,
+        help="Optional guardrail that blocks broker submission when one order is too large.",
+    )
+    parser.add_argument(
+        "--allow-duplicate-paper-submission",
+        action="store_true",
+        help="Allow broker submission even if the latest broker snapshot already covers the same market date.",
+    )
     return parser.parse_args()
 
 
@@ -328,6 +360,10 @@ def main() -> None:
         if args.paper_transaction_cost_bps is not None
         else float(base_config.backtest.transaction_cost_bps)
     )
+    max_paper_order_count = args.max_paper_order_count
+    max_paper_total_trade_notional = args.max_paper_total_trade_notional
+    max_paper_single_order_notional = args.max_paper_single_order_notional
+    allow_duplicate_paper_submission = args.allow_duplicate_paper_submission
     positions_existed_before_run = positions_path.exists()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -460,20 +496,53 @@ def main() -> None:
     save_table(recommended_orders, paper_dir / "recommended_orders.csv")
     save_table(next_positions, paper_dir / "next_positions_preview.csv")
     paper_broker_outputs = None
+    paper_broker_guardrails = None
+    paper_broker_reconciliation = None
+    paper_broker_guardrails_path = paper_dir / "paper_broker_guardrails.json"
+    latest_guardrails_path = paper_broker_root / "latest_guardrails.json"
+    paper_broker_reconciliation_path = paper_dir / "paper_broker_reconciliation.json"
+    latest_reconciliation_path = paper_broker_root / "latest_reconciliation.json"
+    reconciliation_ledger_path = paper_broker_root / "ledger" / "reconciliation.jsonl"
     if submit_paper_orders:
-        paper_broker_outputs = submit_orders_via_paper_broker_backend(
-            backend=paper_broker_backend,
+        paper_broker_guardrails = evaluate_paper_broker_guardrails(
             orders=recommended_orders,
-            latest_prices=latest_prices,
-            positions_path=positions_path,
             broker_root=paper_broker_root,
-            capital_base=paper_initial_equity,
-            allow_fractional_shares=workflow_config.risk.allow_fractional_shares,
-            transaction_cost_bps=paper_transaction_cost_bps,
-            env_file=paper_broker_env_file,
-            run_dir=run_dir,
-            workflow_manifest_path=run_dir / "workflow_manifest.json",
+            broker_backend=paper_broker_backend,
+            positions_path=positions_path,
+            max_order_count=max_paper_order_count,
+            max_total_trade_notional=max_paper_total_trade_notional,
+            max_single_order_notional=max_paper_single_order_notional,
+            allow_duplicate_market_date=allow_duplicate_paper_submission,
         )
+        save_paper_broker_guardrails(paper_broker_guardrails_path, paper_broker_guardrails)
+        save_paper_broker_guardrails(latest_guardrails_path, paper_broker_guardrails)
+        if paper_broker_guardrails["ok_to_submit"]:
+            paper_broker_outputs = submit_orders_via_paper_broker_backend(
+                backend=paper_broker_backend,
+                orders=recommended_orders,
+                latest_prices=latest_prices,
+                positions_path=positions_path,
+                broker_root=paper_broker_root,
+                capital_base=paper_initial_equity,
+                allow_fractional_shares=workflow_config.risk.allow_fractional_shares,
+                transaction_cost_bps=paper_transaction_cost_bps,
+                env_file=paper_broker_env_file,
+                run_dir=run_dir,
+                workflow_manifest_path=run_dir / "workflow_manifest.json",
+            )
+            paper_broker_reconciliation = reconcile_paper_broker_state(
+                positions_path=positions_path,
+                broker_root=paper_broker_root,
+                runtime_status_path=positions_path.parent / "runtime" / "latest_status.json",
+                market_data_manifest_path=(
+                    Path(run.market_data_provenance["manifest_path"])
+                    if run.market_data_provenance and run.market_data_provenance.get("manifest_path")
+                    else None
+                ),
+            )
+            save_paper_broker_reconciliation(paper_broker_reconciliation_path, paper_broker_reconciliation)
+            save_paper_broker_reconciliation(latest_reconciliation_path, paper_broker_reconciliation)
+            append_paper_broker_reconciliation_ledger(reconciliation_ledger_path, paper_broker_reconciliation)
     elif apply_paper_orders:
         save_table(next_positions, positions_path)
     current_positions_after_run = load_current_positions(positions_path)
@@ -504,6 +573,24 @@ def main() -> None:
             "paper_broker_env_file": paper_broker_env_file if submit_paper_orders else None,
             "paper_initial_equity": paper_initial_equity if submit_paper_orders else None,
             "paper_transaction_cost_bps": paper_transaction_cost_bps if submit_paper_orders else None,
+            "max_paper_order_count": max_paper_order_count if submit_paper_orders else None,
+            "max_paper_total_trade_notional": (
+                max_paper_total_trade_notional if submit_paper_orders else None
+            ),
+            "max_paper_single_order_notional": (
+                max_paper_single_order_notional if submit_paper_orders else None
+            ),
+            "allow_duplicate_paper_submission": (
+                allow_duplicate_paper_submission if submit_paper_orders else None
+            ),
+            "paper_submission_blocked": (
+                bool(paper_broker_guardrails and not paper_broker_guardrails["ok_to_submit"])
+                if submit_paper_orders
+                else None
+            ),
+            "paper_guardrail_violation_count": (
+                int(paper_broker_guardrails["violation_count"]) if paper_broker_guardrails else None
+            ),
             "market_data_source": (
                 run.market_data_provenance.get("source")
                 if run.market_data_provenance
@@ -551,6 +638,17 @@ def main() -> None:
             "paper_broker_account_ledger": (
                 paper_broker_outputs["account_ledger_path"] if paper_broker_outputs else None
             ),
+            "paper_broker_guardrails": paper_broker_guardrails_path if paper_broker_guardrails else None,
+            "paper_broker_latest_guardrails": latest_guardrails_path if paper_broker_guardrails else None,
+            "paper_broker_reconciliation": (
+                paper_broker_reconciliation_path if paper_broker_reconciliation else None
+            ),
+            "paper_broker_latest_reconciliation": (
+                latest_reconciliation_path if paper_broker_reconciliation else None
+            ),
+            "paper_broker_reconciliation_ledger": (
+                reconciliation_ledger_path if paper_broker_reconciliation else None
+            ),
         },
     )
     paper_runtime_outputs = write_paper_runtime_state(
@@ -567,6 +665,8 @@ def main() -> None:
         market_data_provenance=run.market_data_provenance,
         workflow_manifest_path=workflow_manifest_path,
         paper_broker_outputs=paper_broker_outputs,
+        paper_broker_guardrails=paper_broker_guardrails,
+        paper_broker_reconciliation=paper_broker_reconciliation,
     )
     workflow_manifest = attach_output_files(
         workflow_manifest,
@@ -597,6 +697,10 @@ def main() -> None:
     print(f"Submitted paper orders to OMS: {submit_paper_orders}")
     if submit_paper_orders:
         print(f"Paper broker backend: {paper_broker_backend}")
+    if paper_broker_guardrails is not None:
+        print(f"Paper broker guardrail violations: {paper_broker_guardrails['violation_count']}")
+    if paper_broker_guardrails is not None and not paper_broker_guardrails["ok_to_submit"]:
+        print("Paper broker submission blocked by guardrails.")
     print(f"Paper state mode: {paper_runtime_outputs['status']['paper_state_mode']}")
     print(f"Paper runtime status: {paper_runtime_outputs['latest_status_path']}")
     if paper_broker_outputs is not None:
