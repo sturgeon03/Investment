@@ -237,6 +237,7 @@ us_stocks/data_large_cap_60_dynamic_eligibility/raw/yfinance_cache/
 tmp_probe2/
 test_runtime_temp/
 pytest-cache-files-*/
+us_stocks/paper/runtime/
 tmp*/
 
 # Marimo

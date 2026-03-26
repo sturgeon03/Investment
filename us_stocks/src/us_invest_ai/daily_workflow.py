@@ -19,6 +19,7 @@ from us_invest_ai.llm_scoring import (
     save_score_outputs,
     score_documents,
 )
+from us_invest_ai.paper_runtime import write_paper_runtime_state
 from us_invest_ai.pipeline import run_research_pipeline, save_research_outputs
 from us_invest_ai.portfolio import (
     build_next_positions,
@@ -269,6 +270,7 @@ def main() -> None:
     positions_path = Path(args.positions_csv).resolve() if args.positions_csv else base_config.workflow.positions_path
     output_root = Path(args.output_root).resolve() if args.output_root else base_config.workflow.output_root
     apply_paper_orders = args.apply_paper_orders or base_config.workflow.apply_paper_orders
+    positions_existed_before_run = positions_path.exists()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     suffix = f"_{_slugify(args.run_label)}" if args.run_label else ""
@@ -401,7 +403,9 @@ def main() -> None:
     save_table(next_positions, paper_dir / "next_positions_preview.csv")
     if apply_paper_orders:
         save_table(next_positions, positions_path)
+    current_positions_after_run = load_current_positions(positions_path)
 
+    workflow_manifest_path = run_dir / "workflow_manifest.json"
     workflow_manifest = build_run_manifest(
         workflow_config,
         experiment_name="daily_workflow",
@@ -452,7 +456,32 @@ def main() -> None:
             "paper_positions_state": positions_path if apply_paper_orders else None,
         },
     )
-    save_manifest(run_dir / "workflow_manifest.json", workflow_manifest)
+    paper_runtime_outputs = write_paper_runtime_state(
+        run_dir=run_dir,
+        positions_path=positions_path,
+        positions_existed_before_run=positions_existed_before_run,
+        apply_paper_orders=apply_paper_orders,
+        provider=provider,
+        llm_enabled=llm_enabled,
+        target_portfolio=target_portfolio,
+        recommended_orders=recommended_orders,
+        next_positions=next_positions,
+        current_positions_after_run=current_positions_after_run,
+        market_data_provenance=run.market_data_provenance,
+        workflow_manifest_path=workflow_manifest_path,
+    )
+    workflow_manifest = attach_output_files(
+        workflow_manifest,
+        {
+            "paper_runtime_status": paper_runtime_outputs["latest_status_path"],
+            "paper_runtime_ledger": paper_runtime_outputs["ledger_path"],
+            "paper_runtime_latest_target_portfolio": paper_runtime_outputs["latest_target_path"],
+            "paper_runtime_latest_recommended_orders": paper_runtime_outputs["latest_orders_path"],
+            "paper_runtime_latest_next_positions": paper_runtime_outputs["latest_next_positions_path"],
+            "paper_runtime_latest_positions_state": paper_runtime_outputs["latest_positions_state_path"],
+        },
+    )
+    save_manifest(workflow_manifest_path, workflow_manifest)
 
     print(f"Run directory: {run_dir}")
     if env_file:
@@ -467,6 +496,8 @@ def main() -> None:
     print(f"LLM enabled in research run: {llm_enabled}")
     print(f"Paper positions source: {positions_path}")
     print(f"Applied paper orders to state: {apply_paper_orders}")
+    print(f"Paper state mode: {paper_runtime_outputs['status']['paper_state_mode']}")
+    print(f"Paper runtime status: {paper_runtime_outputs['latest_status_path']}")
     if errors:
         print(f"Skipped {len(errors)} filings due to errors.")
     print(run.backtest_result.summary.to_string(index=False))

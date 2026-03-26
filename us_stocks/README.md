@@ -127,6 +127,12 @@ $env:SEC_USER_AGENT="InvestmentResearch your_email@example.com"
 python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --run-label daily_check
 ```
 
+Run the portable daily paper runner with repo-local defaults and an automatic paper runtime status check:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_us_daily.ps1 -RunLabel daily_check
+```
+
 Run the same workflow with a real OpenAI-compatible API:
 
 ```powershell
@@ -213,7 +219,19 @@ Running `daily_workflow.py` also saves:
 - `signals/llm_scores.merged.csv`: existing signal store plus the new run's scores.
 - `paper/target_portfolio.csv`: current paper target holdings.
 - `paper/recommended_orders.csv`: delta versus the supplied current positions file.
+- `paper/next_positions_preview.csv`: optional post-trade holdings preview.
+- `paper/runtime/latest_status.json`: latest operator-facing paper runtime summary, including whether paper state advanced and whether the run bootstrapped from zero holdings.
+- `paper/runtime/ledger/paper_run_ledger.jsonl`: append-only paper run ledger for automation and morning review.
+- `paper/runtime/latest_*.csv`: stable latest copies of target holdings, recommended orders, next positions, and the current paper state.
 - `workflow_manifest.json`: workflow settings, provider/model metadata, counts, and output file hashes.
+
+Inspect the latest paper runtime status:
+
+```powershell
+python -m us_invest_ai.paper_runtime_status --positions-path .\us_stocks\paper\current_positions.csv
+```
+
+`run_us_daily.ps1` now defaults to the heuristic swing config, auto-detects the repo-local `.venv` Python when available, resolves the configured paper positions path, and prints this runtime summary after each successful run.
 
 ## Comparison Metrics
 
