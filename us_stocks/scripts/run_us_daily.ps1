@@ -7,6 +7,8 @@ param(
     [string]$Provider = "",
     [string]$PositionsCsv = "",
     [string]$PaperBrokerRoot = "",
+    [string]$PaperBrokerBackend = "local",
+    [string]$PaperBrokerEnvFile = "",
     [switch]$ApplyPaperOrders,
     [switch]$SubmitPaperOrders
 )
@@ -72,10 +74,15 @@ if ($ApplyPaperOrders) {
 }
 if ($SubmitPaperOrders) {
     $arguments += "--submit-paper-orders"
+    $arguments += @("--paper-broker-backend", $PaperBrokerBackend)
 }
 if ($PaperBrokerRoot) {
     $resolvedPaperBrokerRoot = [System.IO.Path]::GetFullPath($PaperBrokerRoot)
     $arguments += @("--paper-broker-root", $resolvedPaperBrokerRoot)
+}
+if ($PaperBrokerEnvFile) {
+    $resolvedPaperBrokerEnvFile = [System.IO.Path]::GetFullPath($PaperBrokerEnvFile)
+    $arguments += @("--paper-broker-env-file", $resolvedPaperBrokerEnvFile)
 }
 
 Write-Host "Repo root: $resolvedRepoRoot"
@@ -84,6 +91,9 @@ Write-Host "Log: $logPath"
 Write-Host "Positions CSV: $resolvedPositionsCsv"
 if ($PaperBrokerRoot) {
     Write-Host "Paper broker root: $resolvedPaperBrokerRoot"
+}
+if ($SubmitPaperOrders) {
+    Write-Host "Paper broker backend: $PaperBrokerBackend"
 }
 
 & $PythonExe @arguments 2>&1 | Tee-Object -FilePath $logPath

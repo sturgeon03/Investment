@@ -35,6 +35,7 @@ def test_build_runtime_summary_compares_paper_date_to_market_date() -> None:
                 "paper_state_advanced": True,
                 "recommended_orders": {"order_count": 3},
                 "paper_broker": {
+                    "broker_backend": "alpaca",
                     "order_count_submitted": 2,
                     "fill_count": 2,
                     "ending_cash": 1250.0,
@@ -57,6 +58,7 @@ def test_build_runtime_summary_compares_paper_date_to_market_date() -> None:
     assert summary["paper_market_date"] == "2026-03-25"
     assert summary["stale"] is True
     assert summary["recommended_order_count"] == 3
+    assert summary["paper_broker_backend"] == "alpaca"
     assert summary["paper_broker_order_count"] == 2
     assert summary["paper_broker_fill_count"] == 2
     assert summary["paper_broker_cash"] == 1250.0

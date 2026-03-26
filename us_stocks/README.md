@@ -173,6 +173,18 @@ Submit the paper orders into the local OMS directly from the workflow:
 python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --submit-paper-orders
 ```
 
+Prepare an Alpaca paper env file for a real broker-backed paper adapter:
+
+```powershell
+Copy-Item .\us_stocks\.env.us.alpaca.paper.example .\us_stocks\.env.us.alpaca.paper
+```
+
+Submit the workflow orders through the Alpaca paper adapter instead of the local OMS:
+
+```powershell
+python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --submit-paper-orders --paper-broker-backend alpaca --paper-broker-env-file .\us_stocks\.env.us.alpaca.paper
+```
+
 Submit a previously saved `recommended_orders.csv` file into the OMS:
 
 ```powershell
@@ -245,6 +257,7 @@ Running `daily_workflow.py` also saves:
 - `paper/broker/latest_orders.csv`: latest submitted OMS orders with fill status.
 - `paper/broker/latest_fills.csv`: latest paper fills.
 - `paper/broker/ledger/orders.jsonl`, `fills.jsonl`, `account_snapshots.jsonl`: append-only OMS ledgers.
+- `paper/broker/` can now be driven either by the local OMS backend or by the new Alpaca paper adapter, selected with `--paper-broker-backend`.
 - `workflow_manifest.json`: workflow settings, provider/model metadata, counts, and output file hashes.
 
 Inspect the latest paper runtime status:
@@ -255,6 +268,7 @@ python -m us_invest_ai.paper_runtime_status --positions-path .\us_stocks\paper\c
 
 `run_us_daily.ps1` now defaults to the heuristic swing config, auto-detects the repo-local `.venv` Python when available, resolves the configured paper positions path, and prints this runtime summary after each successful run.
 When you add `-SubmitPaperOrders`, it also routes the recommended orders into the local broker-shaped paper OMS and leaves the resulting account snapshot under `paper/broker/`.
+You can switch that path to Alpaca paper with `-PaperBrokerBackend alpaca -PaperBrokerEnvFile .\us_stocks\.env.us.alpaca.paper`.
 
 ## Comparison Metrics
 

@@ -297,6 +297,7 @@ def submit_orders_to_paper_broker(
     account_summary = normalize_for_json(
         {
             "job_name": "paper_broker_oms",
+            "broker_backend": "local",
             "generated_at_utc": now_utc,
             "market_date": market_date,
             "broker_root": str(broker_root),

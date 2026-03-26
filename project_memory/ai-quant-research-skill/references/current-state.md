@@ -19,6 +19,7 @@ Operational note:
 - the paper-first daily workflow now also writes operator-facing runtime state under `us_stocks/paper/runtime/`, including `latest_status.json`, an append-only paper ledger, stable latest CSV views, and a CLI summary path via `python -m us_invest_ai.paper_runtime_status`
 - `us_stocks/scripts/run_us_daily.ps1` is now a portable paper runner: it defaults to the heuristic swing config, auto-detects the repo-local `.venv` Python, resolves the configured paper positions path, and prints the latest paper runtime status after each successful run
 - the daily workflow can now also submit recommended orders into a local broker-shaped paper OMS, which writes order/fill/account ledgers under `us_stocks/paper/broker/`, updates `paper/current_positions.csv`, and surfaces the broker summary back through the paper runtime status
+- the paper OMS now has a broker-backend seam: `local` remains the default, and an `alpaca` paper adapter scaffold can now submit those same recommended orders through Alpaca's paper trading API when `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` are present
 
 The US project already includes:
 
