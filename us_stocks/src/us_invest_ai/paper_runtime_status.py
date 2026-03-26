@@ -41,6 +41,7 @@ def build_runtime_summary(latest_status_path: Path, market_data_manifest_path: P
     latest_market_date = latest_market_date_from_manifest(manifest_path)
     paper_market_date = status.get("latest_market_date")
     stale = bool(latest_market_date and latest_market_date != paper_market_date)
+    paper_broker = status.get("paper_broker") or {}
 
     return {
         "status_exists": True,
@@ -54,6 +55,10 @@ def build_runtime_summary(latest_status_path: Path, market_data_manifest_path: P
         "recommended_order_count": ((status.get("recommended_orders") or {}).get("order_count")),
         "run_directory": status.get("run_directory"),
         "positions_path": status.get("positions_path"),
+        "paper_broker_order_count": paper_broker.get("order_count_submitted"),
+        "paper_broker_fill_count": paper_broker.get("fill_count"),
+        "paper_broker_cash": paper_broker.get("ending_cash"),
+        "paper_broker_total_equity": paper_broker.get("ending_total_equity"),
     }
 
 
@@ -91,6 +96,10 @@ def main() -> int:
     print(f"Paper state mode: {summary.get('paper_state_mode')}")
     print(f"Paper state advanced: {summary.get('paper_state_advanced')}")
     print(f"Recommended order count: {summary.get('recommended_order_count')}")
+    print(f"Paper broker submitted orders: {summary.get('paper_broker_order_count')}")
+    print(f"Paper broker fill count: {summary.get('paper_broker_fill_count')}")
+    print(f"Paper broker ending cash: {summary.get('paper_broker_cash')}")
+    print(f"Paper broker ending total equity: {summary.get('paper_broker_total_equity')}")
     print(f"Paper runtime stale: {summary['stale']}")
     if summary.get("run_directory"):
         print(f"Latest paper run: {summary['run_directory']}")

@@ -19,6 +19,7 @@ from us_invest_ai.llm_scoring import (
     save_score_outputs,
     score_documents,
 )
+from us_invest_ai.paper_broker import submit_orders_to_paper_broker
 from us_invest_ai.paper_runtime import write_paper_runtime_state
 from us_invest_ai.pipeline import run_research_pipeline, save_research_outputs
 from us_invest_ai.portfolio import (
@@ -164,6 +165,28 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Write the next positions preview back to the configured paper positions file.",
     )
+    parser.add_argument(
+        "--submit-paper-orders",
+        action="store_true",
+        help="Submit recommended orders into the local broker-shaped paper OMS and update paper account state.",
+    )
+    parser.add_argument(
+        "--paper-broker-root",
+        default=None,
+        help="Optional root directory for broker-shaped paper OMS state. Defaults to <positions-path>/../broker.",
+    )
+    parser.add_argument(
+        "--paper-initial-equity",
+        type=float,
+        default=None,
+        help="Optional initial equity used when bootstrapping the paper broker account. Defaults to risk.capital_base.",
+    )
+    parser.add_argument(
+        "--paper-transaction-cost-bps",
+        type=float,
+        default=None,
+        help="Optional transaction cost used by the paper broker fill simulator. Defaults to backtest.transaction_cost_bps.",
+    )
     return parser.parse_args()
 
 
@@ -270,6 +293,24 @@ def main() -> None:
     positions_path = Path(args.positions_csv).resolve() if args.positions_csv else base_config.workflow.positions_path
     output_root = Path(args.output_root).resolve() if args.output_root else base_config.workflow.output_root
     apply_paper_orders = args.apply_paper_orders or base_config.workflow.apply_paper_orders
+    submit_paper_orders = args.submit_paper_orders
+    if apply_paper_orders and submit_paper_orders:
+        raise ValueError("Choose either --apply-paper-orders or --submit-paper-orders, not both.")
+    paper_broker_root = (
+        Path(args.paper_broker_root).resolve()
+        if args.paper_broker_root
+        else positions_path.parent / "broker"
+    )
+    paper_initial_equity = (
+        float(args.paper_initial_equity)
+        if args.paper_initial_equity is not None
+        else float(base_config.risk.capital_base)
+    )
+    paper_transaction_cost_bps = (
+        float(args.paper_transaction_cost_bps)
+        if args.paper_transaction_cost_bps is not None
+        else float(base_config.backtest.transaction_cost_bps)
+    )
     positions_existed_before_run = positions_path.exists()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -401,7 +442,20 @@ def main() -> None:
     save_table(target_portfolio, paper_dir / "target_portfolio.csv")
     save_table(recommended_orders, paper_dir / "recommended_orders.csv")
     save_table(next_positions, paper_dir / "next_positions_preview.csv")
-    if apply_paper_orders:
+    paper_broker_outputs = None
+    if submit_paper_orders:
+        paper_broker_outputs = submit_orders_to_paper_broker(
+            orders=recommended_orders,
+            latest_prices=latest_prices,
+            positions_path=positions_path,
+            broker_root=paper_broker_root,
+            capital_base=paper_initial_equity,
+            allow_fractional_shares=workflow_config.risk.allow_fractional_shares,
+            transaction_cost_bps=paper_transaction_cost_bps,
+            run_dir=run_dir,
+            workflow_manifest_path=run_dir / "workflow_manifest.json",
+        )
+    elif apply_paper_orders:
         save_table(next_positions, positions_path)
     current_positions_after_run = load_current_positions(positions_path)
 
@@ -425,6 +479,10 @@ def main() -> None:
             "positions_path": str(positions_path),
             "positions_sha256": sha256_file(positions_path),
             "apply_paper_orders": apply_paper_orders,
+            "submit_paper_orders": submit_paper_orders,
+            "paper_broker_root": str(paper_broker_root) if submit_paper_orders else None,
+            "paper_initial_equity": paper_initial_equity if submit_paper_orders else None,
+            "paper_transaction_cost_bps": paper_transaction_cost_bps if submit_paper_orders else None,
             "market_data_source": (
                 run.market_data_provenance.get("source")
                 if run.market_data_provenance
@@ -453,7 +511,25 @@ def main() -> None:
             "paper_target_portfolio": paper_dir / "target_portfolio.csv",
             "paper_recommended_orders": paper_dir / "recommended_orders.csv",
             "paper_next_positions": paper_dir / "next_positions_preview.csv",
-            "paper_positions_state": positions_path if apply_paper_orders else None,
+            "paper_positions_state": positions_path if (apply_paper_orders or submit_paper_orders) else None,
+            "paper_broker_latest_account_state": (
+                paper_broker_outputs["latest_account_state_path"] if paper_broker_outputs else None
+            ),
+            "paper_broker_latest_orders": (
+                paper_broker_outputs["latest_orders_path"] if paper_broker_outputs else None
+            ),
+            "paper_broker_latest_fills": (
+                paper_broker_outputs["latest_fills_path"] if paper_broker_outputs else None
+            ),
+            "paper_broker_orders_ledger": (
+                paper_broker_outputs["orders_ledger_path"] if paper_broker_outputs else None
+            ),
+            "paper_broker_fills_ledger": (
+                paper_broker_outputs["fills_ledger_path"] if paper_broker_outputs else None
+            ),
+            "paper_broker_account_ledger": (
+                paper_broker_outputs["account_ledger_path"] if paper_broker_outputs else None
+            ),
         },
     )
     paper_runtime_outputs = write_paper_runtime_state(
@@ -469,6 +545,7 @@ def main() -> None:
         current_positions_after_run=current_positions_after_run,
         market_data_provenance=run.market_data_provenance,
         workflow_manifest_path=workflow_manifest_path,
+        paper_broker_outputs=paper_broker_outputs,
     )
     workflow_manifest = attach_output_files(
         workflow_manifest,
@@ -496,8 +573,11 @@ def main() -> None:
     print(f"LLM enabled in research run: {llm_enabled}")
     print(f"Paper positions source: {positions_path}")
     print(f"Applied paper orders to state: {apply_paper_orders}")
+    print(f"Submitted paper orders to OMS: {submit_paper_orders}")
     print(f"Paper state mode: {paper_runtime_outputs['status']['paper_state_mode']}")
     print(f"Paper runtime status: {paper_runtime_outputs['latest_status_path']}")
+    if paper_broker_outputs is not None:
+        print(f"Paper broker account state: {paper_broker_outputs['latest_account_state_path']}")
     if errors:
         print(f"Skipped {len(errors)} filings due to errors.")
     print(run.backtest_result.summary.to_string(index=False))

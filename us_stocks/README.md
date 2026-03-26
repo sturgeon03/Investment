@@ -133,6 +133,12 @@ Run the portable daily paper runner with repo-local defaults and an automatic pa
 powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_us_daily.ps1 -RunLabel daily_check
 ```
 
+Submit the generated paper orders into the broker-shaped local paper OMS:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_us_daily.ps1 -RunLabel daily_check -SubmitPaperOrders
+```
+
 Run the same workflow with a real OpenAI-compatible API:
 
 ```powershell
@@ -159,6 +165,18 @@ Write the paper portfolio state forward automatically:
 
 ```powershell
 python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_deepseek.yaml --apply-paper-orders
+```
+
+Submit the paper orders into the local OMS directly from the workflow:
+
+```powershell
+python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --submit-paper-orders
+```
+
+Submit a previously saved `recommended_orders.csv` file into the OMS:
+
+```powershell
+python -m us_invest_ai.paper_broker_oms --orders-csv .\us_stocks\runs\<timestamp>\paper\recommended_orders.csv --latest-prices-csv .\us_stocks\data\raw\prices.csv --positions-path .\us_stocks\paper\current_positions.csv --capital-base 100000 --transaction-cost-bps 10
 ```
 
 Compare the hard baseline, soft price-only control, and all three LLM horizons:
@@ -223,6 +241,10 @@ Running `daily_workflow.py` also saves:
 - `paper/runtime/latest_status.json`: latest operator-facing paper runtime summary, including whether paper state advanced and whether the run bootstrapped from zero holdings.
 - `paper/runtime/ledger/paper_run_ledger.jsonl`: append-only paper run ledger for automation and morning review.
 - `paper/runtime/latest_*.csv`: stable latest copies of target holdings, recommended orders, next positions, and the current paper state.
+- `paper/broker/latest_account_state.json`: broker-shaped paper account snapshot with cash, equity, fees, and fill counts.
+- `paper/broker/latest_orders.csv`: latest submitted OMS orders with fill status.
+- `paper/broker/latest_fills.csv`: latest paper fills.
+- `paper/broker/ledger/orders.jsonl`, `fills.jsonl`, `account_snapshots.jsonl`: append-only OMS ledgers.
 - `workflow_manifest.json`: workflow settings, provider/model metadata, counts, and output file hashes.
 
 Inspect the latest paper runtime status:
@@ -232,6 +254,7 @@ python -m us_invest_ai.paper_runtime_status --positions-path .\us_stocks\paper\c
 ```
 
 `run_us_daily.ps1` now defaults to the heuristic swing config, auto-detects the repo-local `.venv` Python when available, resolves the configured paper positions path, and prints this runtime summary after each successful run.
+When you add `-SubmitPaperOrders`, it also routes the recommended orders into the local broker-shaped paper OMS and leaves the resulting account snapshot under `paper/broker/`.
 
 ## Comparison Metrics
 

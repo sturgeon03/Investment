@@ -101,3 +101,51 @@ def test_write_paper_runtime_state_records_preview_only_when_orders_not_applied(
     assert status["paper_state_mode"] == "preview_only"
     assert status["paper_state_advanced"] is False
     assert status["current_positions_after_run"]["row_count"] == 0
+
+
+def test_write_paper_runtime_state_records_broker_submission_summary() -> None:
+    root = _fresh_dir("paper_runtime_broker")
+    run_dir = root / "runs" / "20260326_140000"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    positions_path = root / "paper" / "current_positions.csv"
+    positions_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"ticker": ["BBB"], "shares": [3.0]}).to_csv(positions_path, index=False)
+
+    broker_root = root / "paper" / "broker"
+    outputs = write_paper_runtime_state(
+        run_dir=run_dir,
+        positions_path=positions_path,
+        positions_existed_before_run=False,
+        apply_paper_orders=False,
+        provider="heuristic",
+        llm_enabled=False,
+        target_portfolio=pd.DataFrame(columns=["ticker", "target_weight", "target_notional_after_rounding"]),
+        recommended_orders=pd.DataFrame(columns=["ticker", "side", "trade_notional"]),
+        next_positions=pd.DataFrame({"ticker": ["BBB"], "shares": [3.0]}),
+        current_positions_after_run=pd.DataFrame({"ticker": ["BBB"], "shares": [3.0]}),
+        market_data_provenance=None,
+        workflow_manifest_path=run_dir / "workflow_manifest.json",
+        paper_broker_outputs={
+            "summary": {
+                "order_count_submitted": 2,
+                "fill_count": 2,
+                "ending_cash": 0.0,
+                "ending_total_equity": 300.0,
+                "positions_updated": True,
+                "latest_files": {
+                    "account_state": str(broker_root / "latest_account_state.json"),
+                    "orders": str(broker_root / "latest_orders.csv"),
+                    "fills": str(broker_root / "latest_fills.csv"),
+                },
+            },
+            "latest_account_state_path": broker_root / "latest_account_state.json",
+            "latest_orders_path": broker_root / "latest_orders.csv",
+            "latest_fills_path": broker_root / "latest_fills.csv",
+        },
+    )
+
+    status = json.loads(outputs["latest_status_path"].read_text(encoding="utf-8"))
+    assert status["paper_state_mode"] == "broker_submitted"
+    assert status["paper_state_advanced"] is True
+    assert status["paper_broker"]["order_count_submitted"] == 2
+    assert status["latest_runtime_files"]["paper_broker_account_state"].endswith("latest_account_state.json")

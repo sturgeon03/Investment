@@ -79,6 +79,16 @@ def _positions_summary(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def _paper_broker_summary(paper_broker_outputs: dict[str, Any] | None) -> dict[str, Any] | None:
+    if paper_broker_outputs is None:
+        return None
+    summary = dict(paper_broker_outputs.get("summary", {}))
+    latest_files = summary.get("latest_files")
+    if isinstance(latest_files, dict):
+        summary["latest_files"] = {str(key): str(value) for key, value in latest_files.items()}
+    return summary
+
+
 def write_paper_runtime_state(
     *,
     run_dir: Path,
@@ -93,6 +103,7 @@ def write_paper_runtime_state(
     current_positions_after_run: pd.DataFrame,
     market_data_provenance: dict[str, Any] | None,
     workflow_manifest_path: Path,
+    paper_broker_outputs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     runtime_root = positions_path.parent / "runtime"
     ledger_path = runtime_root / "ledger" / "paper_run_ledger.jsonl"
@@ -107,15 +118,22 @@ def write_paper_runtime_state(
     save_table(next_positions, latest_next_positions_path)
     save_table(current_positions_after_run, latest_positions_state_path)
 
-    paper_state_advanced = bool(apply_paper_orders and positions_path.exists())
-    paper_state_bootstrapped = bool(paper_state_advanced and not positions_existed_before_run)
-    state_mode = (
-        "bootstrapped"
-        if paper_state_bootstrapped
-        else "advanced"
-        if paper_state_advanced
-        else "preview_only"
+    broker_summary = _paper_broker_summary(paper_broker_outputs)
+    paper_state_advanced = bool(
+        (apply_paper_orders and positions_path.exists())
+        or (broker_summary and broker_summary.get("positions_updated"))
     )
+    paper_state_bootstrapped = bool(paper_state_advanced and not positions_existed_before_run)
+    if broker_summary is not None:
+        state_mode = "broker_submitted" if broker_summary.get("order_count_submitted", 0) > 0 else "broker_idle"
+    else:
+        state_mode = (
+            "bootstrapped"
+            if paper_state_bootstrapped
+            else "advanced"
+            if paper_state_advanced
+            else "preview_only"
+        )
 
     status = normalize_for_json(
         {
@@ -135,15 +153,33 @@ def write_paper_runtime_state(
             "target_portfolio": _portfolio_summary(target_portfolio),
             "recommended_orders": _orders_summary(recommended_orders),
             "current_positions_after_run": _positions_summary(current_positions_after_run),
+            "paper_broker": broker_summary,
             "latest_runtime_files": {
                 "target_portfolio": str(latest_target_path),
                 "recommended_orders": str(latest_orders_path),
                 "next_positions_preview": str(latest_next_positions_path),
                 "current_positions_state": str(latest_positions_state_path),
                 "ledger": str(ledger_path),
+                "paper_broker_account_state": (
+                    str(paper_broker_outputs["latest_account_state_path"])
+                    if paper_broker_outputs is not None
+                    else None
+                ),
+                "paper_broker_orders": (
+                    str(paper_broker_outputs["latest_orders_path"])
+                    if paper_broker_outputs is not None
+                    else None
+                ),
+                "paper_broker_fills": (
+                    str(paper_broker_outputs["latest_fills_path"])
+                    if paper_broker_outputs is not None
+                    else None
+                ),
             },
             "next_recommended_action": (
-                "Inspect the latest recommended orders before promoting this paper flow toward broker-backed paper execution."
+                "Inspect the latest paper broker account and fill ledgers before promoting this flow toward a real broker adapter."
+                if broker_summary is not None
+                else "Inspect the latest recommended orders before promoting this paper flow toward broker-backed paper execution."
                 if not recommended_orders.empty
                 else "No rebalance orders were generated; review freshness and wait for the next paper cycle."
             ),
@@ -165,4 +201,3 @@ def write_paper_runtime_state(
         "latest_positions_state_path": latest_positions_state_path,
         "status": status,
     }
-

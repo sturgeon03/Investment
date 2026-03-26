@@ -6,7 +6,9 @@ param(
     [string]$RunLabel = "",
     [string]$Provider = "",
     [string]$PositionsCsv = "",
-    [switch]$ApplyPaperOrders
+    [string]$PaperBrokerRoot = "",
+    [switch]$ApplyPaperOrders,
+    [switch]$SubmitPaperOrders
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,11 +70,21 @@ if ($Provider) {
 if ($ApplyPaperOrders) {
     $arguments += "--apply-paper-orders"
 }
+if ($SubmitPaperOrders) {
+    $arguments += "--submit-paper-orders"
+}
+if ($PaperBrokerRoot) {
+    $resolvedPaperBrokerRoot = [System.IO.Path]::GetFullPath($PaperBrokerRoot)
+    $arguments += @("--paper-broker-root", $resolvedPaperBrokerRoot)
+}
 
 Write-Host "Repo root: $resolvedRepoRoot"
 Write-Host "Config: $resolvedConfigPath"
 Write-Host "Log: $logPath"
 Write-Host "Positions CSV: $resolvedPositionsCsv"
+if ($PaperBrokerRoot) {
+    Write-Host "Paper broker root: $resolvedPaperBrokerRoot"
+}
 
 & $PythonExe @arguments 2>&1 | Tee-Object -FilePath $logPath
 if ($LASTEXITCODE -ne 0) {
