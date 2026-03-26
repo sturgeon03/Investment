@@ -208,6 +208,36 @@ us_stocks/automation/launcher/
 us_stocks/automation/locks/
 us_stocks/automation/runs/
 us_stocks/data_large_cap_60_dynamic_eligibility/raw/refresh_run_manifest.json
+us_stocks/data_large_cap_60_dynamic_eligibility/raw/yfinance_cache/
+
+# Local Codex and pytest scratch
+.codex_cache_validation/
+.codex_pytest/
+.codex_manual_validation_*/
+.codex_manual_validation_probe/
+.codex_runtime_pytemp/
+.codex_runtime_test_tmp/
+.codex_runtime_test_tmp_manual2/
+.codex_test_scratch/
+.codex_test_scratch_runtime/
+.codex_test_daily_workflow/
+.codex_tmp/
+.codex_tmp_runtime/
+.codex_tmp_shell_write.txt
+.pytest-cache-local/
+.pytest-tmp/
+.pytest_tmp/
+.tmp/
+.tmp_pytest/
+.tmp_pytest_cache/
+.tmp_test_env/
+.tmp_tests/
+.tmp_test_workdirs/
+.tmp_validation_*/
+tmp_probe2/
+test_runtime_temp/
+pytest-cache-files-*/
+tmp*/
 
 # Marimo
 marimo/_static/

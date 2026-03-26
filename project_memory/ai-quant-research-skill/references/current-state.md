@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-20
+Last updated: 2026-03-26
 
 ## Repository Status
 
@@ -15,6 +15,7 @@ Operational note:
 - local verification currently passes with `88` US tests and `41` KR tests in that environment
 - the US lane now also has `us_stocks/scripts/run_overnight_quant.ps1` plus `us_invest_ai.refresh_market_data`, giving the automation a single-writer overnight path that refreshes canonical market data, writes a refresh manifest, runs the promoted report stack into timestamped output directories, and appends a structured run ledger under `us_stocks/automation/`
 - the shared backtest layer now supports execution-realism controls beyond fixed bps costs via spread, participation-scaled market impact, and liquidity lookback inputs, and both the US and KR lanes now expose that surface
+- the main branch now also includes the missing runtime hardening that had only lived in detached automation worktrees: best-effort repo-health snapshots, UTF-8-safe git manifest capture, repo-local `yfinance` cache routing, cache-signature matching that ignores path drift across equivalent worktrees, `LOKY_MAX_CPU_COUNT=1` defaulting in the report stack, and tighter tree-fit thread caps
 
 The US project already includes:
 
@@ -57,6 +58,8 @@ It is not yet:
 ### Latest canonical overnight rerun
 
 Most recent dependency-complete rerun completed on `2026-03-20` using refreshed market data through `2026-03-19`.
+
+There have been no newer successful canonical reruns since then. The failed `2026-03-21` overnight attempts did not advance the canonical state; they stopped in `refresh_market_data`, with the final clear blocker being Yahoo connectivity for fresh daily data rather than a new research regression.
 
 Dynamic 60-name plus eligibility lane:
 

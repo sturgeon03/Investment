@@ -29,17 +29,23 @@ def build_git_snapshot(project_root: Path) -> dict[str, Any]:
         commit = subprocess.check_output(
             ["git", "-C", str(project_root), "rev-parse", "HEAD"],
             text=True,
+            encoding="utf-8",
+            errors="replace",
             stderr=subprocess.DEVNULL,
         ).strip()
         branch = subprocess.check_output(
             ["git", "-C", str(project_root), "rev-parse", "--abbrev-ref", "HEAD"],
             text=True,
+            encoding="utf-8",
+            errors="replace",
             stderr=subprocess.DEVNULL,
         ).strip()
         dirty = bool(
             subprocess.check_output(
                 ["git", "-C", str(project_root), "status", "--porcelain"],
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 stderr=subprocess.DEVNULL,
             ).strip()
         )

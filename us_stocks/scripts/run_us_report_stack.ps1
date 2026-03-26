@@ -50,6 +50,9 @@ function Invoke-LoggedCommand {
 try {
     Set-Location $resolvedRepoRoot
     $env:PYTHONPATH = ".\us_stocks\src"
+    if (-not $env:LOKY_MAX_CPU_COUNT) {
+        $env:LOKY_MAX_CPU_COUNT = "1"
+    }
 
     Write-Host "Repo root: $resolvedRepoRoot"
     Write-Host "Config: $resolvedConfigPath"

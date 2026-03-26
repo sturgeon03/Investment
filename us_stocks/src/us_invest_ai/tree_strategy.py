@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import os
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.ensemble._hist_gradient_boosting import binning as hist_binning
+from sklearn.ensemble._hist_gradient_boosting import gradient_boosting as hist_gradient_boosting
 
 from us_invest_ai.config import StrategyConfig
 from us_invest_ai.walkforward import (
@@ -42,6 +47,33 @@ class TreeModel:
     validation_mse: float
 
 
+@contextmanager
+def _limit_fit_threads() -> None:
+    thread_env_vars = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS")
+    original_values = {name: os.environ.get(name) for name in thread_env_vars}
+    with ExitStack() as stack:
+        for name in thread_env_vars:
+            os.environ[name] = "1"
+
+        def _one_thread(*args, **kwargs) -> int:
+            return 1
+
+        stack.enter_context(
+            patch.object(hist_gradient_boosting, "_openmp_effective_n_threads", side_effect=_one_thread)
+        )
+        stack.enter_context(
+            patch.object(hist_binning, "_openmp_effective_n_threads", side_effect=_one_thread)
+        )
+        try:
+            yield
+        finally:
+            for name, value in original_values.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+
 def fit_tree_model(
     train_frame: pd.DataFrame,
     validation_frame: pd.DataFrame,
@@ -65,7 +97,8 @@ def fit_tree_model(
         n_iter_no_change=15,
         random_state=config.random_seed,
     )
-    estimator.fit(x_train, y_train, X_val=x_validation, y_val=y_validation)
+    with _limit_fit_threads():
+        estimator.fit(x_train, y_train, X_val=x_validation, y_val=y_validation)
     validation_predictions = estimator.predict(x_validation)
     validation_mse = float(np.mean((validation_predictions - y_validation) ** 2))
     return TreeModel(

@@ -110,6 +110,12 @@ $success = $false
 $errorMessage = $null
 $refreshStatus = "not_started"
 $reportStatus = "not_started"
+$repoHealthStatus = [ordered]@{
+    status = "not_started"
+    exit_code = $null
+    log_path = $repoHealthPath
+    last_output = $null
+}
 $latestMarketDate = $null
 $marketDataSource = $null
 $refreshManifestPath = $null
@@ -118,7 +124,12 @@ $promotionStatus = if ($SkipPromoteCanonical) { "skipped" } else { "not_started"
 try {
     Set-Location $resolvedRepoRoot
     $env:PYTHONPATH = ".\us_stocks\src"
-    git status --short --branch | Set-Content -Encoding UTF8 -Path $repoHealthPath
+    & $PythonExe -m us_invest_ai.repo_health --repo-root $resolvedRepoRoot --output-path $repoHealthPath | Out-Null
+    $repoHealthStatus.exit_code = $LASTEXITCODE
+    $repoHealthStatus.status = if ($LASTEXITCODE -eq 0) { "succeeded" } else { "warning" }
+    if (Test-Path $repoHealthPath) {
+        $repoHealthStatus.last_output = (Get-Content -Path $repoHealthPath | Select-Object -Last 1)
+    }
 
     if ($WaitUntilUsClose) {
         Write-LockHeartbeat -LockDir $lockDir -Stage "waiting_for_us_close"
@@ -155,7 +166,7 @@ try {
 
     Write-LockHeartbeat -LockDir $lockDir -Stage "run_report_stack"
     $reportStatus = "running"
-    & powershell -ExecutionPolicy Bypass -File (Join-Path $defaultUsStocksRoot "scripts\run_us_report_stack.ps1") `
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $defaultUsStocksRoot "scripts\run_us_report_stack.ps1") `
         -RepoRoot $resolvedRepoRoot `
         -PythonExe $PythonExe `
         -ConfigPath $resolvedConfigPath `
@@ -188,6 +199,9 @@ try {
 }
 catch {
     $errorMessage = $_.Exception.Message
+    if ([string]::IsNullOrWhiteSpace($errorMessage)) {
+        $errorMessage = ($_ | Out-String).Trim()
+    }
     if ($refreshStatus -eq "running") {
         $refreshStatus = "failed"
     }
@@ -226,6 +240,7 @@ finally {
         market_data_source = $marketDataSource
         refresh_status = $refreshStatus
         report_status = $reportStatus
+        repo_health_status = $repoHealthStatus
         promotion_status = $promotionStatus
         next_recommended_action = if ($success) {
             "Review the latest overnight report artifacts and continue the next highest-priority validated task."

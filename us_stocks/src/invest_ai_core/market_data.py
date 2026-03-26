@@ -184,6 +184,34 @@ def _path_info(path: Path | None) -> dict[str, Any] | None:
     }
 
 
+def _cache_signature(info: dict[str, Any] | None) -> dict[str, Any] | None:
+    if info is None:
+        return None
+    return {
+        "exists": info.get("exists"),
+        "sha256": info.get("sha256"),
+    }
+
+
+def _inputs_match_for_cache(
+    cached_inputs: dict[str, Any] | None,
+    requested_inputs: dict[str, Any],
+) -> bool:
+    if not isinstance(cached_inputs, dict):
+        return False
+    for key, requested_info in requested_inputs.items():
+        if _cache_signature(cached_inputs.get(key)) != _cache_signature(requested_info):
+            return False
+    return True
+
+
+def _configure_yfinance_cache(raw_dir: Path) -> Path:
+    cache_dir = raw_dir / "yfinance_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    yf.set_tz_cache_location(str(cache_dir))
+    return cache_dir
+
+
 def _frame_summary(frame: pd.DataFrame) -> dict[str, Any]:
     normalized_dates = pd.to_datetime(frame["date"]).dt.normalize()
     return {
@@ -224,6 +252,7 @@ def prepare_market_data_bundle(
     prices_path = raw_dir / "prices.csv"
     benchmark_path = raw_dir / "benchmark.csv"
     manifest_path = raw_dir / "market_data_manifest.json"
+    yfinance_cache_dir = _configure_yfinance_cache(raw_dir)
 
     requested_inputs = {
         "tickers_file": _path_info(tickers_file),
@@ -243,7 +272,7 @@ def prepare_market_data_bundle(
         and benchmark_path.exists()
         and cached_manifest is not None
         and cached_manifest.get("query") == requested_query
-        and cached_manifest.get("inputs") == requested_inputs
+        and _inputs_match_for_cache(cached_manifest.get("inputs"), requested_inputs)
     )
     if used_cache:
         prices = load_prices(prices_path)
@@ -272,6 +301,7 @@ def prepare_market_data_bundle(
         "source": source,
         "query": requested_query,
         "inputs": requested_inputs,
+        "yfinance_cache_dir": str(yfinance_cache_dir),
         "prices_file": _path_info(prices_path),
         "benchmark_file": _path_info(benchmark_path),
         "prices_summary": _frame_summary(prices),

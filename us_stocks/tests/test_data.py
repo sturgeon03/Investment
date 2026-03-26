@@ -127,6 +127,85 @@ class DataBundleTests(unittest.TestCase):
             self.assertEqual(saved["prices_summary"]["ticker_count"], 1)
             self.assertEqual(saved["benchmark_summary"]["ticker_count"], 1)
 
+    def test_prepare_market_data_bundle_reuses_cache_when_paths_change_but_hashes_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            raw_dir = root / "data" / "raw"
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            prices_path = raw_dir / "prices.csv"
+            benchmark_path = raw_dir / "benchmark.csv"
+            manifest_path = raw_dir / "market_data_manifest.json"
+            old_inputs_root = root / "old_inputs"
+            new_inputs_root = root / "new_inputs"
+            old_inputs_root.mkdir(parents=True, exist_ok=True)
+            new_inputs_root.mkdir(parents=True, exist_ok=True)
+            old_metadata_path = old_inputs_root / "metadata.csv"
+            new_metadata_path = new_inputs_root / "metadata.csv"
+            old_snapshots_path = old_inputs_root / "snapshots.csv"
+            new_snapshots_path = new_inputs_root / "snapshots.csv"
+
+            prices_path.write_text(
+                (
+                    "date,ticker,open,high,low,close,volume\n"
+                    "2025-01-02,AAA,100,101,99,100,1000\n"
+                    "2025-01-03,AAA,101,102,100,101,1100\n"
+                ),
+                encoding="utf-8",
+            )
+            benchmark_path.write_text(
+                (
+                    "date,ticker,open,high,low,close,volume\n"
+                    "2025-01-02,SPY,500,501,499,500,1000000\n"
+                    "2025-01-03,SPY,501,502,500,501,1100000\n"
+                ),
+                encoding="utf-8",
+            )
+            old_metadata_path.write_text("ticker,sector\nAAA,Technology\n", encoding="utf-8")
+            new_metadata_path.write_text("ticker,sector\nAAA,Technology\n", encoding="utf-8")
+            old_snapshots_path.write_text("effective_date,ticker\n2025-01-01,AAA\n", encoding="utf-8")
+            new_snapshots_path.write_text("effective_date,ticker\n2025-01-01,AAA\n", encoding="utf-8")
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "query": {
+                            "tickers": ["AAA"],
+                            "benchmark": "SPY",
+                            "start": "2025-01-01",
+                            "end": None,
+                        },
+                        "inputs": {
+                            "tickers_file": None,
+                            "metadata_file": {
+                                "path": str(old_metadata_path),
+                                "exists": True,
+                                "sha256": sha256_file(old_metadata_path),
+                            },
+                            "universe_snapshots_file": {
+                                "path": str(old_snapshots_path),
+                                "exists": True,
+                                "sha256": sha256_file(old_snapshots_path),
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("us_invest_ai.data.download_ohlcv") as mocked_download:
+                bundle = prepare_market_data_bundle(
+                    data_dir=root / "data",
+                    tickers=["AAA"],
+                    benchmark="SPY",
+                    start="2025-01-01",
+                    end=None,
+                    metadata_file=new_metadata_path,
+                    universe_snapshots_file=new_snapshots_path,
+                )
+
+            mocked_download.assert_not_called()
+            self.assertEqual(bundle.provenance["source"], "cache")
+            self.assertTrue(bundle.provenance["yfinance_cache_dir"].endswith("yfinance_cache"))
+
     def test_prepare_market_data_bundle_refreshes_when_request_signature_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
