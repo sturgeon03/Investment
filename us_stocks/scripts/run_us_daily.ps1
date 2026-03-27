@@ -9,6 +9,7 @@ param(
     [string]$PaperBrokerRoot = "",
     [string]$PaperBrokerBackend = "local",
     [string]$PaperBrokerEnvFile = "",
+    [switch]$PaperBrokerLiveReadinessCheck,
     [Nullable[int]]$MaxPaperOrderCount = $null,
     [Nullable[double]]$MaxPaperTotalTradeNotional = $null,
     [Nullable[double]]$MaxPaperSingleOrderNotional = $null,
@@ -88,6 +89,9 @@ if ($PaperBrokerEnvFile) {
     $resolvedPaperBrokerEnvFile = [System.IO.Path]::GetFullPath($PaperBrokerEnvFile)
     $arguments += @("--paper-broker-env-file", $resolvedPaperBrokerEnvFile)
 }
+if ($PaperBrokerLiveReadinessCheck) {
+    $arguments += "--paper-broker-live-readiness-check"
+}
 if ($MaxPaperOrderCount -ne $null) {
     $arguments += @("--max-paper-order-count", [string]$MaxPaperOrderCount)
 }
@@ -110,6 +114,9 @@ if ($PaperBrokerRoot) {
 }
 if ($SubmitPaperOrders) {
     Write-Host "Paper broker backend: $PaperBrokerBackend"
+}
+if ($PaperBrokerLiveReadinessCheck) {
+    Write-Host "Paper broker live readiness check: True"
 }
 if ($MaxPaperOrderCount -ne $null) {
     Write-Host "Max paper order count: $MaxPaperOrderCount"

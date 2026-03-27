@@ -24,6 +24,15 @@ from us_invest_ai.paper_broker_guardrails import (
     evaluate_paper_broker_guardrails,
     save_paper_broker_guardrails,
 )
+from us_invest_ai.paper_broker_kill_switch import (
+    evaluate_paper_broker_kill_switch,
+    save_paper_broker_kill_switch_summary,
+)
+from us_invest_ai.paper_broker_readiness import (
+    append_paper_broker_readiness_ledger,
+    evaluate_paper_broker_readiness,
+    save_paper_broker_readiness,
+)
 from us_invest_ai.paper_broker_reconciliation import (
     append_paper_broker_reconciliation_ledger,
     reconcile_paper_broker_state,
@@ -196,6 +205,11 @@ def _parse_args() -> argparse.Namespace:
         help="Optional env file for the selected paper broker backend, for example Alpaca paper credentials.",
     )
     parser.add_argument(
+        "--paper-broker-live-readiness-check",
+        action="store_true",
+        help="Ping the selected broker backend for a live readiness check before submission.",
+    )
+    parser.add_argument(
         "--paper-initial-equity",
         type=float,
         default=None,
@@ -350,6 +364,7 @@ def main() -> None:
         if args.paper_broker_env_file
         else None
     )
+    paper_broker_live_readiness_check = args.paper_broker_live_readiness_check
     paper_initial_equity = (
         float(args.paper_initial_equity)
         if args.paper_initial_equity is not None
@@ -496,14 +511,37 @@ def main() -> None:
     save_table(recommended_orders, paper_dir / "recommended_orders.csv")
     save_table(next_positions, paper_dir / "next_positions_preview.csv")
     paper_broker_outputs = None
+    paper_broker_kill_switch = None
+    paper_broker_readiness = None
     paper_broker_guardrails = None
     paper_broker_reconciliation = None
+    paper_broker_kill_switch_path = paper_dir / "paper_broker_kill_switch.json"
+    latest_kill_switch_path = paper_broker_root / "latest_kill_switch.json"
+    paper_broker_readiness_path = paper_dir / "paper_broker_readiness.json"
+    latest_readiness_path = paper_broker_root / "latest_readiness.json"
+    readiness_ledger_path = paper_broker_root / "ledger" / "readiness.jsonl"
     paper_broker_guardrails_path = paper_dir / "paper_broker_guardrails.json"
     latest_guardrails_path = paper_broker_root / "latest_guardrails.json"
     paper_broker_reconciliation_path = paper_dir / "paper_broker_reconciliation.json"
     latest_reconciliation_path = paper_broker_root / "latest_reconciliation.json"
     reconciliation_ledger_path = paper_broker_root / "ledger" / "reconciliation.jsonl"
     if submit_paper_orders:
+        paper_broker_kill_switch = evaluate_paper_broker_kill_switch(
+            broker_root=paper_broker_root,
+            broker_backend=paper_broker_backend,
+            positions_path=positions_path,
+        )
+        save_paper_broker_kill_switch_summary(paper_broker_kill_switch_path, paper_broker_kill_switch)
+        save_paper_broker_kill_switch_summary(latest_kill_switch_path, paper_broker_kill_switch)
+        paper_broker_readiness = evaluate_paper_broker_readiness(
+            broker_backend=paper_broker_backend,
+            broker_root=paper_broker_root,
+            env_file=paper_broker_env_file,
+            live_check=paper_broker_live_readiness_check,
+        )
+        save_paper_broker_readiness(paper_broker_readiness_path, paper_broker_readiness)
+        save_paper_broker_readiness(latest_readiness_path, paper_broker_readiness)
+        append_paper_broker_readiness_ledger(readiness_ledger_path, paper_broker_readiness)
         paper_broker_guardrails = evaluate_paper_broker_guardrails(
             orders=recommended_orders,
             broker_root=paper_broker_root,
@@ -516,7 +554,12 @@ def main() -> None:
         )
         save_paper_broker_guardrails(paper_broker_guardrails_path, paper_broker_guardrails)
         save_paper_broker_guardrails(latest_guardrails_path, paper_broker_guardrails)
-        if paper_broker_guardrails["ok_to_submit"]:
+        can_submit_to_broker = bool(
+            paper_broker_kill_switch["ok_to_submit"]
+            and paper_broker_readiness["ready"]
+            and paper_broker_guardrails["ok_to_submit"]
+        )
+        if can_submit_to_broker:
             paper_broker_outputs = submit_orders_via_paper_broker_backend(
                 backend=paper_broker_backend,
                 orders=recommended_orders,
@@ -571,6 +614,9 @@ def main() -> None:
             "paper_broker_root": str(paper_broker_root) if submit_paper_orders else None,
             "paper_broker_backend": paper_broker_backend if submit_paper_orders else None,
             "paper_broker_env_file": paper_broker_env_file if submit_paper_orders else None,
+            "paper_broker_live_readiness_check": (
+                paper_broker_live_readiness_check if submit_paper_orders else None
+            ),
             "paper_initial_equity": paper_initial_equity if submit_paper_orders else None,
             "paper_transaction_cost_bps": paper_transaction_cost_bps if submit_paper_orders else None,
             "max_paper_order_count": max_paper_order_count if submit_paper_orders else None,
@@ -584,10 +630,21 @@ def main() -> None:
                 allow_duplicate_paper_submission if submit_paper_orders else None
             ),
             "paper_submission_blocked": (
-                bool(paper_broker_guardrails and not paper_broker_guardrails["ok_to_submit"])
+                bool(
+                    submit_paper_orders
+                    and (
+                        (paper_broker_kill_switch and not paper_broker_kill_switch["ok_to_submit"])
+                        or (paper_broker_readiness and not paper_broker_readiness["ready"])
+                        or (paper_broker_guardrails and not paper_broker_guardrails["ok_to_submit"])
+                    )
+                )
                 if submit_paper_orders
                 else None
             ),
+            "paper_kill_switch_active": (
+                bool(paper_broker_kill_switch["active"]) if paper_broker_kill_switch else None
+            ),
+            "paper_broker_ready": bool(paper_broker_readiness["ready"]) if paper_broker_readiness else None,
             "paper_guardrail_violation_count": (
                 int(paper_broker_guardrails["violation_count"]) if paper_broker_guardrails else None
             ),
@@ -638,6 +695,15 @@ def main() -> None:
             "paper_broker_account_ledger": (
                 paper_broker_outputs["account_ledger_path"] if paper_broker_outputs else None
             ),
+            "paper_broker_kill_switch": (
+                paper_broker_kill_switch_path if paper_broker_kill_switch else None
+            ),
+            "paper_broker_latest_kill_switch": (
+                latest_kill_switch_path if paper_broker_kill_switch else None
+            ),
+            "paper_broker_readiness": paper_broker_readiness_path if paper_broker_readiness else None,
+            "paper_broker_latest_readiness": latest_readiness_path if paper_broker_readiness else None,
+            "paper_broker_readiness_ledger": readiness_ledger_path if paper_broker_readiness else None,
             "paper_broker_guardrails": paper_broker_guardrails_path if paper_broker_guardrails else None,
             "paper_broker_latest_guardrails": latest_guardrails_path if paper_broker_guardrails else None,
             "paper_broker_reconciliation": (
@@ -665,6 +731,8 @@ def main() -> None:
         market_data_provenance=run.market_data_provenance,
         workflow_manifest_path=workflow_manifest_path,
         paper_broker_outputs=paper_broker_outputs,
+        paper_broker_kill_switch=paper_broker_kill_switch,
+        paper_broker_readiness=paper_broker_readiness,
         paper_broker_guardrails=paper_broker_guardrails,
         paper_broker_reconciliation=paper_broker_reconciliation,
     )
@@ -697,9 +765,17 @@ def main() -> None:
     print(f"Submitted paper orders to OMS: {submit_paper_orders}")
     if submit_paper_orders:
         print(f"Paper broker backend: {paper_broker_backend}")
+    if paper_broker_kill_switch is not None:
+        print(f"Paper broker kill switch active: {paper_broker_kill_switch['active']}")
+    if paper_broker_readiness is not None:
+        print(f"Paper broker readiness ok: {paper_broker_readiness['ready']}")
     if paper_broker_guardrails is not None:
         print(f"Paper broker guardrail violations: {paper_broker_guardrails['violation_count']}")
-    if paper_broker_guardrails is not None and not paper_broker_guardrails["ok_to_submit"]:
+    if paper_broker_kill_switch is not None and not paper_broker_kill_switch["ok_to_submit"]:
+        print("Paper broker submission blocked by kill switch.")
+    elif paper_broker_readiness is not None and not paper_broker_readiness["ready"]:
+        print("Paper broker submission blocked by readiness checks.")
+    elif paper_broker_guardrails is not None and not paper_broker_guardrails["ok_to_submit"]:
         print("Paper broker submission blocked by guardrails.")
     print(f"Paper state mode: {paper_runtime_outputs['status']['paper_state_mode']}")
     print(f"Paper runtime status: {paper_runtime_outputs['latest_status_path']}")

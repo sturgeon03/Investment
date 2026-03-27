@@ -181,3 +181,38 @@ def test_write_paper_runtime_state_records_broker_blocked_mode() -> None:
     status = json.loads(outputs["latest_status_path"].read_text(encoding="utf-8"))
     assert status["paper_state_mode"] == "broker_blocked"
     assert status["paper_broker_guardrails"]["violation_count"] == 1
+
+
+def test_write_paper_runtime_state_marks_broker_killed_before_other_blocks() -> None:
+    root = _fresh_dir("paper_runtime_broker_killed")
+    run_dir = root / "runs" / "20260326_160000"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    positions_path = root / "paper" / "current_positions.csv"
+    positions_path.parent.mkdir(parents=True, exist_ok=True)
+
+    outputs = write_paper_runtime_state(
+        run_dir=run_dir,
+        positions_path=positions_path,
+        positions_existed_before_run=False,
+        apply_paper_orders=False,
+        provider="heuristic",
+        llm_enabled=False,
+        target_portfolio=pd.DataFrame(columns=["ticker", "target_weight", "target_notional_after_rounding"]),
+        recommended_orders=pd.DataFrame(columns=["ticker", "side", "trade_notional"]),
+        next_positions=pd.DataFrame(columns=["ticker", "shares"]),
+        current_positions_after_run=pd.DataFrame(columns=["ticker", "shares"]),
+        market_data_provenance=None,
+        workflow_manifest_path=run_dir / "workflow_manifest.json",
+        paper_broker_kill_switch={"active": True, "reason": "manual stop", "ok_to_submit": False},
+        paper_broker_readiness={"ready": False, "error": "credentials missing"},
+        paper_broker_guardrails={
+            "violation_count": 1,
+            "ok_to_submit": False,
+            "violations": [{"code": "duplicate_market_date_submission_blocked"}],
+        },
+    )
+
+    status = json.loads(outputs["latest_status_path"].read_text(encoding="utf-8"))
+    assert status["paper_state_mode"] == "broker_killed"
+    assert status["paper_broker_kill_switch"]["active"] is True
+    assert status["next_recommended_action"].startswith("Deactivate or clear the broker kill switch")

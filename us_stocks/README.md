@@ -185,10 +185,23 @@ Submit the workflow orders through the Alpaca paper adapter instead of the local
 python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --submit-paper-orders --paper-broker-backend alpaca --paper-broker-env-file .\us_stocks\.env.us.alpaca.paper
 ```
 
+Require a live readiness probe before the broker-backed paper submit:
+
+```powershell
+python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --submit-paper-orders --paper-broker-backend alpaca --paper-broker-env-file .\us_stocks\.env.us.alpaca.paper --paper-broker-live-readiness-check
+```
+
 Add submission guardrails so broker-backed paper runs refuse duplicates or oversized order sets:
 
 ```powershell
 python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_swing.yaml --provider heuristic --submit-paper-orders --paper-broker-backend local --max-paper-order-count 8 --max-paper-total-trade-notional 35000 --max-paper-single-order-notional 12000
+```
+
+Manually stop or resume broker-backed paper submission with the kill switch:
+
+```powershell
+python -m us_invest_ai.paper_broker_control --broker-root .\us_stocks\paper\broker --activate --reason "manual review"
+python -m us_invest_ai.paper_broker_control --broker-root .\us_stocks\paper\broker --deactivate
 ```
 
 Submit a previously saved `recommended_orders.csv` file into the OMS:
@@ -263,9 +276,11 @@ Running `daily_workflow.py` also saves:
 - `paper/broker/latest_orders.csv`: latest submitted OMS orders with fill status.
 - `paper/broker/latest_fills.csv`: latest paper fills.
 - `paper/broker/ledger/orders.jsonl`, `fills.jsonl`, `account_snapshots.jsonl`: append-only OMS ledgers.
+- `paper/broker/latest_kill_switch.json`: latest kill-switch status snapshot used by the workflow.
+- `paper/broker/latest_readiness.json`: latest broker readiness evaluation, including optional live connectivity checks.
 - `paper/broker/latest_guardrails.json`: latest pre-submit guardrail evaluation, including duplicate-market-date protection and order/notional limits.
 - `paper/broker/latest_reconciliation.json`: latest post-submit reconciliation against `paper/current_positions.csv` and the paper runtime status.
-- `paper/broker/ledger/reconciliation.jsonl`: append-only reconciliation history.
+- `paper/broker/ledger/reconciliation.jsonl`, `readiness.jsonl`, `kill_switch_events.jsonl`: append-only operational histories.
 - `paper/broker/` can now be driven either by the local OMS backend or by the new Alpaca paper adapter, selected with `--paper-broker-backend`.
 - `workflow_manifest.json`: workflow settings, provider/model metadata, counts, and output file hashes.
 
@@ -278,7 +293,8 @@ python -m us_invest_ai.paper_runtime_status --positions-path .\us_stocks\paper\c
 `run_us_daily.ps1` now defaults to the heuristic swing config, auto-detects the repo-local `.venv` Python when available, resolves the configured paper positions path, and prints this runtime summary after each successful run.
 When you add `-SubmitPaperOrders`, it also routes the recommended orders into the local broker-shaped paper OMS and leaves the resulting account snapshot under `paper/broker/`.
 You can switch that path to Alpaca paper with `-PaperBrokerBackend alpaca -PaperBrokerEnvFile .\us_stocks\.env.us.alpaca.paper`.
-The submit path can also enforce `-MaxPaperOrderCount`, `-MaxPaperTotalTradeNotional`, and `-MaxPaperSingleOrderNotional` through `daily_workflow.py`, and the runtime status now reports broker guardrail and reconciliation outcomes.
+You can add `-PaperBrokerLiveReadinessCheck` when you want the run to probe the live paper account before submission.
+The submit path can also enforce `-MaxPaperOrderCount`, `-MaxPaperTotalTradeNotional`, and `-MaxPaperSingleOrderNotional` through `daily_workflow.py`, and the runtime status now reports broker kill-switch, readiness, guardrail, and reconciliation outcomes.
 
 ## Comparison Metrics
 

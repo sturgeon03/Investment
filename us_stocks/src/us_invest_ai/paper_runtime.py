@@ -110,6 +110,8 @@ def write_paper_runtime_state(
     market_data_provenance: dict[str, Any] | None,
     workflow_manifest_path: Path,
     paper_broker_outputs: dict[str, Any] | None = None,
+    paper_broker_kill_switch: dict[str, Any] | None = None,
+    paper_broker_readiness: dict[str, Any] | None = None,
     paper_broker_guardrails: dict[str, Any] | None = None,
     paper_broker_reconciliation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -127,6 +129,8 @@ def write_paper_runtime_state(
     save_table(current_positions_after_run, latest_positions_state_path)
 
     broker_summary = _paper_broker_summary(paper_broker_outputs)
+    broker_kill_switch = _normalize_optional_summary(paper_broker_kill_switch)
+    broker_readiness = _normalize_optional_summary(paper_broker_readiness)
     broker_guardrails = _normalize_optional_summary(paper_broker_guardrails)
     broker_reconciliation = _normalize_optional_summary(paper_broker_reconciliation)
     paper_state_advanced = bool(
@@ -134,7 +138,11 @@ def write_paper_runtime_state(
         or (broker_summary and broker_summary.get("positions_updated"))
     )
     paper_state_bootstrapped = bool(paper_state_advanced and not positions_existed_before_run)
-    if broker_guardrails is not None and not broker_guardrails.get("ok_to_submit", True):
+    if broker_kill_switch is not None and broker_kill_switch.get("active"):
+        state_mode = "broker_killed"
+    elif broker_readiness is not None and not broker_readiness.get("ready", True):
+        state_mode = "broker_not_ready"
+    elif broker_guardrails is not None and not broker_guardrails.get("ok_to_submit", True):
         state_mode = "broker_blocked"
     elif broker_summary is not None:
         state_mode = "broker_submitted" if broker_summary.get("order_count_submitted", 0) > 0 else "broker_idle"
@@ -166,6 +174,8 @@ def write_paper_runtime_state(
             "recommended_orders": _orders_summary(recommended_orders),
             "current_positions_after_run": _positions_summary(current_positions_after_run),
             "paper_broker": broker_summary,
+            "paper_broker_kill_switch": broker_kill_switch,
+            "paper_broker_readiness": broker_readiness,
             "paper_broker_guardrails": broker_guardrails,
             "paper_broker_reconciliation": broker_reconciliation,
             "latest_runtime_files": {
@@ -191,6 +201,12 @@ def write_paper_runtime_state(
                 ),
             },
             "next_recommended_action": (
+                "Deactivate or clear the broker kill switch before attempting another paper broker submission."
+                if broker_kill_switch is not None and broker_kill_switch.get("active")
+                else
+                "Resolve the broker readiness failure before attempting another paper broker submission."
+                if broker_readiness is not None and not broker_readiness.get("ready", True)
+                else
                 "Resolve the broker guardrail violations before attempting another paper broker submission."
                 if broker_guardrails is not None and not broker_guardrails.get("ok_to_submit", True)
                 else
