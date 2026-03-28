@@ -22,6 +22,7 @@ Operational note:
 - the paper OMS now has a broker-backend seam: `local` remains the default, and an `alpaca` paper adapter scaffold can now submit those same recommended orders through Alpaca's paper trading API when `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` are present
 - paper broker submission now has explicit guardrails and reconciliation: duplicate same-day submissions can be blocked, oversized order sets can be refused before mutation, and each successful broker submission can emit a reconciliation report comparing `paper/current_positions.csv`, broker-synced positions, and the latest paper runtime status
 - broker-backed paper submission now also has operator kill-switch and readiness layers: manual stop/resume is explicit under `paper/broker/kill_switch.json`, readiness checks can validate Alpaca credentials and optional live account connectivity, and the runtime status now surfaces both alongside the existing guardrail and reconciliation summaries
+- the paper runtime now also emits a structured incident layer under `paper/runtime/`: each run writes `latest_incidents.json` plus an append-only incident ledger, and the wrapper script can fail on those incidents to support stricter paper-ops gating before live broker promotion
 
 The US project already includes:
 

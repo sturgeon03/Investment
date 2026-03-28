@@ -56,6 +56,7 @@ def build_runtime_summary(latest_status_path: Path, market_data_manifest_path: P
         "stale": stale,
         "paper_state_mode": status.get("paper_state_mode"),
         "paper_state_advanced": status.get("paper_state_advanced"),
+        "next_recommended_action": status.get("next_recommended_action"),
         "recommended_order_count": ((status.get("recommended_orders") or {}).get("order_count")),
         "run_directory": status.get("run_directory"),
         "positions_path": status.get("positions_path"),
@@ -108,6 +109,7 @@ def main() -> int:
     print(f"Paper market date: {summary['paper_market_date']}")
     print(f"Paper state mode: {summary.get('paper_state_mode')}")
     print(f"Paper state advanced: {summary.get('paper_state_advanced')}")
+    print(f"Next recommended action: {summary.get('next_recommended_action')}")
     print(f"Recommended order count: {summary.get('recommended_order_count')}")
     print(f"Paper broker backend: {summary.get('paper_broker_backend')}")
     print(f"Paper broker submitted orders: {summary.get('paper_broker_order_count')}")

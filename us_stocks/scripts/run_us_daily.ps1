@@ -13,6 +13,7 @@ param(
     [Nullable[int]]$MaxPaperOrderCount = $null,
     [Nullable[double]]$MaxPaperTotalTradeNotional = $null,
     [Nullable[double]]$MaxPaperSingleOrderNotional = $null,
+    [switch]$FailOnPaperIncident,
     [switch]$AllowDuplicatePaperSubmission,
     [switch]$ApplyPaperOrders,
     [switch]$SubmitPaperOrders
@@ -141,4 +142,19 @@ $statusArguments = @(
 Write-Host ""
 Write-Host "[Paper runtime status]"
 & $PythonExe @statusArguments 2>&1 | Tee-Object -FilePath $logPath -Append
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+
+$incidentArguments = @(
+    "-m", "us_invest_ai.paper_runtime_incidents",
+    "--positions-path", $resolvedPositionsCsv
+)
+if ($FailOnPaperIncident) {
+    $incidentArguments += "--fail-on-error"
+}
+
+Write-Host ""
+Write-Host "[Paper runtime incidents]"
+& $PythonExe @incidentArguments 2>&1 | Tee-Object -FilePath $logPath -Append
 exit $LASTEXITCODE

@@ -204,6 +204,12 @@ python -m us_invest_ai.paper_broker_control --broker-root .\us_stocks\paper\brok
 python -m us_invest_ai.paper_broker_control --broker-root .\us_stocks\paper\broker --deactivate
 ```
 
+Summarize paper runtime incidents and fail when any error-level issue exists:
+
+```powershell
+python -m us_invest_ai.paper_runtime_incidents --positions-path .\us_stocks\paper\current_positions.csv --fail-on-error
+```
+
 Submit a previously saved `recommended_orders.csv` file into the OMS:
 
 ```powershell
@@ -270,7 +276,9 @@ Running `daily_workflow.py` also saves:
 - `paper/recommended_orders.csv`: delta versus the supplied current positions file.
 - `paper/next_positions_preview.csv`: optional post-trade holdings preview.
 - `paper/runtime/latest_status.json`: latest operator-facing paper runtime summary, including whether paper state advanced and whether the run bootstrapped from zero holdings.
+- `paper/runtime/latest_incidents.json`: latest structured incident summary over freshness, kill switch, readiness, guardrails, and reconciliation.
 - `paper/runtime/ledger/paper_run_ledger.jsonl`: append-only paper run ledger for automation and morning review.
+- `paper/runtime/ledger/incidents.jsonl`: append-only incident history for operator review and automation gating.
 - `paper/runtime/latest_*.csv`: stable latest copies of target holdings, recommended orders, next positions, and the current paper state.
 - `paper/broker/latest_account_state.json`: broker-shaped paper account snapshot with cash, equity, fees, and fill counts.
 - `paper/broker/latest_orders.csv`: latest submitted OMS orders with fill status.
@@ -295,6 +303,7 @@ When you add `-SubmitPaperOrders`, it also routes the recommended orders into th
 You can switch that path to Alpaca paper with `-PaperBrokerBackend alpaca -PaperBrokerEnvFile .\us_stocks\.env.us.alpaca.paper`.
 You can add `-PaperBrokerLiveReadinessCheck` when you want the run to probe the live paper account before submission.
 The submit path can also enforce `-MaxPaperOrderCount`, `-MaxPaperTotalTradeNotional`, and `-MaxPaperSingleOrderNotional` through `daily_workflow.py`, and the runtime status now reports broker kill-switch, readiness, guardrail, and reconciliation outcomes.
+You can add `-FailOnPaperIncident` when the wrapper should exit non-zero on any error-level paper incident after the run.
 
 ## Comparison Metrics
 

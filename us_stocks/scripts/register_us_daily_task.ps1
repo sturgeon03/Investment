@@ -12,6 +12,7 @@ param(
     [string]$MaxPaperOrderCount = "",
     [string]$MaxPaperTotalTradeNotional = "",
     [string]$MaxPaperSingleOrderNotional = "",
+    [switch]$FailOnPaperIncident,
     [switch]$AllowDuplicatePaperSubmission,
     [switch]$ApplyPaperOrders,
     [switch]$SubmitPaperOrders
@@ -28,7 +29,8 @@ $liveReadinessArgs = if ($PaperBrokerLiveReadinessCheck) { " -PaperBrokerLiveRea
 $maxOrderArgs = if ($MaxPaperOrderCount) { " -MaxPaperOrderCount `"$MaxPaperOrderCount`"" } else { "" }
 $maxTotalArgs = if ($MaxPaperTotalTradeNotional) { " -MaxPaperTotalTradeNotional `"$MaxPaperTotalTradeNotional`"" } else { "" }
 $maxSingleArgs = if ($MaxPaperSingleOrderNotional) { " -MaxPaperSingleOrderNotional `"$MaxPaperSingleOrderNotional`"" } else { "" }
+$failOnIncidentArgs = if ($FailOnPaperIncident) { " -FailOnPaperIncident" } else { "" }
 $duplicateArgs = if ($AllowDuplicatePaperSubmission) { " -AllowDuplicatePaperSubmission" } else { "" }
-$taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$ConfigPath`" -RepoRoot `"$RepoRoot`" -PythonExe `"$PythonExe`" -LogRoot `"$LogRoot`" -RunLabel `"$RunLabel`"$applySwitch$submitSwitch$backendArgs$envFileArgs$liveReadinessArgs$maxOrderArgs$maxTotalArgs$maxSingleArgs$duplicateArgs"
+$taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$ConfigPath`" -RepoRoot `"$RepoRoot`" -PythonExe `"$PythonExe`" -LogRoot `"$LogRoot`" -RunLabel `"$RunLabel`"$applySwitch$submitSwitch$backendArgs$envFileArgs$liveReadinessArgs$maxOrderArgs$maxTotalArgs$maxSingleArgs$failOnIncidentArgs$duplicateArgs"
 
 schtasks /Create /SC DAILY /TN $TaskName /TR $taskCommand /ST $StartTime /F

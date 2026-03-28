@@ -39,6 +39,11 @@ from us_invest_ai.paper_broker_reconciliation import (
     save_paper_broker_reconciliation,
 )
 from us_invest_ai.paper_runtime import write_paper_runtime_state
+from us_invest_ai.paper_runtime_incidents import (
+    append_paper_runtime_incident_ledger,
+    build_paper_runtime_incident_summary,
+    save_paper_runtime_incident_summary,
+)
 from us_invest_ai.pipeline import run_research_pipeline, save_research_outputs
 from us_invest_ai.portfolio import (
     build_next_positions,
@@ -736,10 +741,27 @@ def main() -> None:
         paper_broker_guardrails=paper_broker_guardrails,
         paper_broker_reconciliation=paper_broker_reconciliation,
     )
+    paper_runtime_incidents_path = paper_dir / "paper_runtime_incidents.json"
+    latest_runtime_incidents_path = positions_path.parent / "runtime" / "latest_incidents.json"
+    runtime_incidents_ledger_path = positions_path.parent / "runtime" / "ledger" / "incidents.jsonl"
+    paper_runtime_incidents = build_paper_runtime_incident_summary(
+        paper_runtime_outputs["latest_status_path"],
+        (
+            Path(run.market_data_provenance["manifest_path"])
+            if run.market_data_provenance and run.market_data_provenance.get("manifest_path")
+            else None
+        ),
+    )
+    save_paper_runtime_incident_summary(paper_runtime_incidents_path, paper_runtime_incidents)
+    save_paper_runtime_incident_summary(latest_runtime_incidents_path, paper_runtime_incidents)
+    append_paper_runtime_incident_ledger(runtime_incidents_ledger_path, paper_runtime_incidents)
     workflow_manifest = attach_output_files(
         workflow_manifest,
         {
             "paper_runtime_status": paper_runtime_outputs["latest_status_path"],
+            "paper_runtime_incidents": paper_runtime_incidents_path,
+            "paper_runtime_latest_incidents": latest_runtime_incidents_path,
+            "paper_runtime_incidents_ledger": runtime_incidents_ledger_path,
             "paper_runtime_ledger": paper_runtime_outputs["ledger_path"],
             "paper_runtime_latest_target_portfolio": paper_runtime_outputs["latest_target_path"],
             "paper_runtime_latest_recommended_orders": paper_runtime_outputs["latest_orders_path"],
@@ -779,6 +801,7 @@ def main() -> None:
         print("Paper broker submission blocked by guardrails.")
     print(f"Paper state mode: {paper_runtime_outputs['status']['paper_state_mode']}")
     print(f"Paper runtime status: {paper_runtime_outputs['latest_status_path']}")
+    print(f"Paper runtime incidents: {latest_runtime_incidents_path}")
     if paper_broker_outputs is not None:
         print(f"Paper broker account state: {paper_broker_outputs['latest_account_state_path']}")
     if errors:
