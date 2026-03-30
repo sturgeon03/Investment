@@ -1,0 +1,149 @@
+{
+  "model_diagnostics": {
+    "configured_baseline": {
+      "degradation_gap_latest_vs_avg": 0.0,
+      "latest_report_gap_delta_vs_stability_latest": 0.0,
+      "latest_report_gap_vs_baseline": 0.0,
+      "priority_tier": "deprioritize",
+      "rank": 3,
+      "stability_avg_gap_vs_baseline": 0.0,
+      "stability_beat_rate": 0.0,
+      "stability_gap_std": 0.0,
+      "stability_latest_gap_vs_baseline": 0.0,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": 0.0
+    },
+    "hybrid_sequence_walkforward": {
+      "degradation_gap_latest_vs_avg": 1804.2278110893603,
+      "latest_report_gap_delta_vs_stability_latest": -866.9963493839023,
+      "latest_report_gap_vs_baseline": -1335.5339005703136,
+      "priority_tier": "deprioritize",
+      "rank": 5,
+      "stability_avg_gap_vs_baseline": -2272.7653622757716,
+      "stability_beat_rate": 0.25,
+      "stability_gap_std": 5070.071920129488,
+      "stability_latest_gap_vs_baseline": -468.5375511864113,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -10057.497802636412
+    },
+    "lstm_walkforward": {
+      "degradation_gap_latest_vs_avg": -977.3365987694087,
+      "latest_report_gap_delta_vs_stability_latest": -358.2544371051772,
+      "latest_report_gap_vs_baseline": -7209.783684641719,
+      "priority_tier": "deprioritize",
+      "rank": 8,
+      "stability_avg_gap_vs_baseline": -5874.1926487671335,
+      "stability_beat_rate": 0.0,
+      "stability_gap_std": 1208.9470638392895,
+      "stability_latest_gap_vs_baseline": -6851.529247536542,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -7138.357450423908
+    },
+    "mlp_walkforward": {
+      "degradation_gap_latest_vs_avg": 4226.924836441081,
+      "latest_report_gap_delta_vs_stability_latest": -666.2635738735846,
+      "latest_report_gap_vs_baseline": 1139.4410550104658,
+      "priority_tier": "challenger",
+      "rank": 6,
+      "stability_avg_gap_vs_baseline": -2421.2202075570312,
+      "stability_beat_rate": 0.5,
+      "stability_gap_std": 5961.5209717554335,
+      "stability_latest_gap_vs_baseline": 1805.7046288840504,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -10803.177161501808
+    },
+    "ridge_walkforward": {
+      "degradation_gap_latest_vs_avg": 3567.5640237473563,
+      "latest_report_gap_delta_vs_stability_latest": -1226.4083260708867,
+      "latest_report_gap_vs_baseline": 425.27172797880485,
+      "priority_tier": "challenger",
+      "rank": 4,
+      "stability_avg_gap_vs_baseline": -1915.8839696976647,
+      "stability_beat_rate": 0.5,
+      "stability_gap_std": 3655.2838283440515,
+      "stability_latest_gap_vs_baseline": 1651.6800540496915,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -6076.39842367488
+    },
+    "tcn_walkforward": {
+      "degradation_gap_latest_vs_avg": -2731.5081950958374,
+      "latest_report_gap_delta_vs_stability_latest": -702.0448415247229,
+      "latest_report_gap_vs_baseline": -7176.313523093297,
+      "priority_tier": "deprioritize",
+      "rank": 7,
+      "stability_avg_gap_vs_baseline": -3742.7604864727364,
+      "stability_beat_rate": 0.25,
+      "stability_gap_std": 5028.764007890172,
+      "stability_latest_gap_vs_baseline": -6474.268681568574,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -7857.598604238767
+    },
+    "transformer_walkforward": {
+      "degradation_gap_latest_vs_avg": 5833.522422060443,
+      "latest_report_gap_delta_vs_stability_latest": 396.2351930852019,
+      "latest_report_gap_vs_baseline": 11352.77906332312,
+      "priority_tier": "promote",
+      "rank": 1,
+      "stability_avg_gap_vs_baseline": 5123.021448177475,
+      "stability_beat_rate": 0.5,
+      "stability_gap_std": 14250.448275644183,
+      "stability_latest_gap_vs_baseline": 10956.543870237918,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -12019.661558610998
+    },
+    "tree_walkforward": {
+      "degradation_gap_latest_vs_avg": -6086.18311874177,
+      "latest_report_gap_delta_vs_stability_latest": -616.1199372250121,
+      "latest_report_gap_vs_baseline": -2900.9839790250553,
+      "priority_tier": "promote",
+      "rank": 2,
+      "stability_avg_gap_vs_baseline": 3801.319076941727,
+      "stability_beat_rate": 0.75,
+      "stability_gap_std": 7058.593436144655,
+      "stability_latest_gap_vs_baseline": -2284.864041800043,
+      "stability_latest_window_label": "2025-03-19_to_2026-03-19",
+      "stability_window_count": 4,
+      "stability_worst_gap_vs_baseline": -2284.864041800043
+    }
+  },
+  "recommendations": {
+    "challenger_tier_models": [
+      "ridge_walkforward",
+      "mlp_walkforward"
+    ],
+    "deprioritize_tier_models": [
+      "configured_baseline",
+      "hybrid_sequence_walkforward",
+      "tcn_walkforward",
+      "lstm_walkforward"
+    ],
+    "next_focus": "Keep the promoted transformer split under canonical monitoring and use repeated-window degradation, not latest-window upside alone, as the gate for further model promotion.",
+    "promote_tier_models": [
+      "transformer_walkforward",
+      "tree_walkforward"
+    ]
+  },
+  "summary": {
+    "baseline_stability_latest_window_label": "2025-03-19_to_2026-03-19",
+    "top_ranked_avg_gap_vs_baseline": 5123.021448177475,
+    "top_ranked_model": "transformer_walkforward",
+    "top_ranked_priority_tier": "promote"
+  },
+  "transformer_split_check": {
+    "available": true,
+    "details": {
+      "latest_report_gap_delta_vs_stability_latest": 396.2351930852019,
+      "latest_report_gap_vs_baseline": 11352.77906332312,
+      "stability_avg_gap_vs_baseline": 5123.021448177475,
+      "stability_latest_gap_vs_baseline": 10956.543870237918,
+      "stability_worst_gap_vs_baseline": -12019.661558610998
+    }
+  }
+}

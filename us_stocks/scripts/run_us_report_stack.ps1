@@ -6,6 +6,7 @@ param(
     [string]$LastYearOutputDir = "us_stocks\artifacts\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year",
     [string]$StabilityOutputDir = "us_stocks\artifacts\stability_large_cap_60_dynamic_seq20_clip_q95",
     [string]$SweepOutputDir = "us_stocks\artifacts\transformer_sweep_v2",
+    [string]$OutputsRoot = "outputs",
     [switch]$RunSweep
 )
 
@@ -76,6 +77,15 @@ try {
         "--output-dir", $StabilityOutputDir
     )
 
+    Invoke-LoggedCommand -StepName "Signal hardening analysis" -Arguments @(
+        "-m", "us_invest_ai.signal_hardening_report",
+        "--last-year-summary", (Join-Path $LastYearOutputDir "deep_learning_summary_last_year.csv"),
+        "--stability-summary", (Join-Path $StabilityOutputDir "stability_window_summary.csv"),
+        "--leaderboard-output", (Join-Path $OutputsRoot "experiments\signal_hardening\leaderboard.csv"),
+        "--analysis-output", (Join-Path $OutputsRoot "reports\performance_degradation\analysis.json"),
+        "--guidance-output", (Join-Path $OutputsRoot "reports\signal_hardening\signal_hardening_guidance.md")
+    )
+
     if ($RunSweep) {
         Invoke-LoggedCommand -StepName "Focused transformer sweep" -Arguments @(
             "-m", "us_invest_ai.transformer_sweep",
@@ -92,6 +102,7 @@ try {
     Write-Host "Report stack complete."
     Write-Host "Latest-year output: $LastYearOutputDir"
     Write-Host "Stability output: $StabilityOutputDir"
+    Write-Host "Signal hardening outputs: $(Join-Path $OutputsRoot 'reports')"
     if ($RunSweep) {
         Write-Host "Sweep output: $SweepOutputDir"
     }
