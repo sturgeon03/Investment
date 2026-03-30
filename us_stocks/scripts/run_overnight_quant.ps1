@@ -43,6 +43,15 @@ function Wait-UntilUsCloseKst {
     }
 }
 
+function ConvertTo-CompactJson {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Payload
+    )
+
+    return ($Payload | ConvertTo-Json -Depth 8 -Compress)
+}
+
 $defaultUsStocksRoot = Split-Path -Parent $PSScriptRoot
 $defaultRepoRoot = Split-Path -Parent $defaultUsStocksRoot
 if (-not $RepoRoot) {
@@ -128,7 +137,7 @@ try {
     $repoHealthStatus.exit_code = $LASTEXITCODE
     $repoHealthStatus.status = if ($LASTEXITCODE -eq 0) { "succeeded" } else { "warning" }
     if (Test-Path $repoHealthPath) {
-        $repoHealthStatus.last_output = (Get-Content -Path $repoHealthPath | Select-Object -Last 1)
+        $repoHealthStatus.last_output = [string](Get-Content -Path $repoHealthPath | Select-Object -Last 1)
     }
 
     if ($WaitUntilUsClose) {
@@ -160,8 +169,12 @@ try {
     $marketDataManifestPath = Join-Path $resolvedDataDir "raw\market_data_manifest.json"
     if (Test-Path $marketDataManifestPath) {
         $marketDataManifest = Get-Content -Raw -Path $marketDataManifestPath | ConvertFrom-Json
-        $latestMarketDate = $marketDataManifest.prices_summary.end_date
-        $marketDataSource = $marketDataManifest.source
+        if ($null -ne $marketDataManifest.prices_summary.end_date) {
+            $latestMarketDate = [string]$marketDataManifest.prices_summary.end_date
+        }
+        if ($null -ne $marketDataManifest.source) {
+            $marketDataSource = [string]$marketDataManifest.source
+        }
     }
 
     Write-LockHeartbeat -LockDir $lockDir -Stage "run_report_stack"
@@ -250,9 +263,10 @@ finally {
         }
     }
 
-    $summary | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 -Path $summaryPath
-    $summary | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 -Path $latestStatusPath
-    ($summary | ConvertTo-Json -Compress -Depth 8) | Add-Content -Encoding UTF8 -Path $ledgerPath
+    $summaryJson = ConvertTo-CompactJson -Payload $summary
+    Set-Content -Encoding UTF8 -Path $summaryPath -Value $summaryJson
+    Set-Content -Encoding UTF8 -Path $latestStatusPath -Value $summaryJson
+    Add-Content -Encoding UTF8 -Path $ledgerPath -Value $summaryJson
 
     if (Test-Path $lockDir) {
         Remove-Item -Recurse -Force $lockDir

@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-26
+Last updated: 2026-03-30
 
 ## Repository Status
 
@@ -23,6 +23,8 @@ Operational note:
 - paper broker submission now has explicit guardrails and reconciliation: duplicate same-day submissions can be blocked, oversized order sets can be refused before mutation, and each successful broker submission can emit a reconciliation report comparing `paper/current_positions.csv`, broker-synced positions, and the latest paper runtime status
 - broker-backed paper submission now also has operator kill-switch and readiness layers: manual stop/resume is explicit under `paper/broker/kill_switch.json`, readiness checks can validate Alpaca credentials and optional live account connectivity, and the runtime status now surfaces both alongside the existing guardrail and reconciliation summaries
 - the paper runtime now also emits a structured incident layer under `paper/runtime/`: each run writes `latest_incidents.json` plus an append-only incident ledger, and the wrapper script can fail on those incidents to support stricter paper-ops gating before live broker promotion
+- the US lane now also has a local Ollama-backed OpenAI-compatible path via `with_llm_ollama_local.yaml`, plus a bounded `with_llm_ollama_local_night.yaml` preview lane that keeps its paper state isolated under `us_stocks/paper/ollama_local/`
+- the overnight automation now has a cache-first wrapper in `us_stocks/scripts/run_overnight_quant_prefer_cache.ps1` and a bounded night-batch orchestrator in `us_stocks/scripts/run_night_batch_until_10.ps1`; both stay single-writer and time-bounded rather than embedding a repo-level multi-agent runtime
 
 The US project already includes:
 
@@ -45,6 +47,7 @@ The US project already includes:
 - retry/backoff hardening for `yfinance` and SEC fetch paths
 - point-in-time eligibility rules on close price, rolling dollar volume, and universe age
 - free-approx dynamic monthly snapshot generation for a broader 60-name large-cap candidate pool
+- a single-ticker document-signal audit CLI that filters one name's sections and scores, aligns each filing to the next trading day, measures later 5/20/60-day returns, and writes a clearly labeled naive long-only signal-following curve for inspection without pretending it is the main portfolio backtest
 
 ## What The Project Is Right Now
 
@@ -64,9 +67,9 @@ It is not yet:
 
 ### Latest canonical overnight rerun
 
-Most recent dependency-complete rerun completed on `2026-03-20` using refreshed market data through `2026-03-19`.
+Most recent dependency-complete canonical rerun completed on `2026-03-30` using cached market data through `2026-03-19`.
 
-There have been no newer successful canonical reruns since then. The failed `2026-03-21` overnight attempts did not advance the canonical state; they stopped in `refresh_market_data`, with the final clear blocker being Yahoo connectivity for fresh daily data rather than a new research regression.
+The fresh-download path is still not fully reliable. The failed `2026-03-21` overnight attempts stopped in `refresh_market_data`, with the clear blocker being Yahoo connectivity for fresh daily data rather than a new research regression. The `2026-03-30` automation therefore used the cache-backed path, completed the promoted report stack, and re-promoted the successful timestamped outputs into the canonical tracked artifact directories.
 
 Dynamic 60-name plus eligibility lane:
 

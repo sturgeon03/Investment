@@ -10,7 +10,7 @@
     "start_date": "2018-01-02",
     "ticker_count": 1
   },
-  "generated_at_utc": "2026-03-20T02:29:08.258465+00:00",
+  "generated_at_utc": "2026-03-30T00:07:29.571557+00:00",
   "inputs": {
     "metadata_file": {
       "exists": true,
@@ -108,5 +108,6 @@
     ]
   },
   "snapshot_rows": 2730,
-  "source": "cache"
+  "source": "cache",
+  "yfinance_cache_dir": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\yfinance_cache"
 }

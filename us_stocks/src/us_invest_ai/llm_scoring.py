@@ -139,10 +139,17 @@ def normalize_multi_horizon_payload(payload: dict[str, Any]) -> dict[str, dict[s
     return normalized
 
 
+def _document_date_iso(value: Any) -> str:
+    if isinstance(value, pd.Timestamp):
+        return value.normalize().date().isoformat()
+    normalized = pd.to_datetime(value).normalize()
+    return normalized.date().isoformat()
+
+
 def build_messages(document: pd.Series) -> list[dict[str, str]]:
     metadata_lines = [
         f"Ticker: {document['ticker']}",
-        f"Date: {document['date'].date().isoformat()}",
+        f"Date: {_document_date_iso(document['date'])}",
         f"Document type: {document.get('doc_type', 'document')}",
         f"Source: {document.get('source', 'unknown')}",
     ]

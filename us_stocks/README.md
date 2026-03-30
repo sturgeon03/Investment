@@ -36,6 +36,8 @@ Recent research additions:
 - `config/with_llm_short.yaml`: short-term LLM horizon.
 - `config/with_llm_swing.yaml`: swing-horizon LLM config.
 - `config/with_llm_long.yaml`: long-term LLM config.
+- `config/with_llm_ollama_local.yaml`: local Ollama-backed OpenAI-compatible workflow config.
+- `config/with_llm_ollama_local_night.yaml`: bounded overnight Ollama preview config for small local runs.
 - `runs/`: dated workflow runs with SEC inputs, merged signals, research outputs, and paper orders.
 - `documents/sec_filings_recent.csv`: raw SEC filings metadata and raw text.
 - `documents/sec_sections.csv`: extracted high-signal sections used for scoring.
@@ -84,6 +86,14 @@ Run the swing-horizon backtest:
 ```powershell
 python -m us_invest_ai.main --config .\us_stocks\config\with_llm_swing.yaml
 ```
+
+Audit one ticker's document signals against later returns:
+
+```powershell
+python -m us_invest_ai.ticker_signal_audit --ticker AAPL --start-date 2025-01-01 --end-date 2025-12-31 --horizon-bucket swing
+```
+
+This single-name audit is not the main cross-sectional portfolio backtest. It saves the filtered sections, section scores, aggregated signal events, a naive long-only signal-following equity curve, and a summary table under `us_stocks/artifacts/ticker_signal_audit/`.
 
 Build the new free-approx dynamic universe snapshots:
 
@@ -139,6 +149,20 @@ Submit the generated paper orders into the broker-shaped local paper OMS:
 powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_us_daily.ps1 -RunLabel daily_check -SubmitPaperOrders
 ```
 
+Rerun the promoted overnight report stack from cached market data when fresh Yahoo downloads are flaky:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_overnight_quant_prefer_cache.ps1
+```
+
+Run the bounded night batch that alternates cache-backed research reruns and small Ollama previews until `10:00` local time:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\us_stocks\scripts\run_night_batch_until_10.ps1
+```
+
+The night config intentionally limits the local LLM path to four tickers and `8-K` only, so a laptop-class CPU box can keep cycling without colliding with the heavier research reruns.
+
 Run the same workflow with a real OpenAI-compatible API:
 
 ```powershell
@@ -160,6 +184,17 @@ Run a local Qwen OpenAI-compatible server from config:
 Copy-Item .\us_stocks\.env.us.qwen_local.example .\us_stocks\.env.us.qwen_local
 python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_qwen_local.yaml --run-label qwen_local
 ```
+
+Run the same OpenAI-compatible flow through Ollama on a local Windows machine:
+
+```powershell
+Copy-Item .\us_stocks\.env.us.ollama_local.example .\us_stocks\.env.us.ollama_local
+ollama pull qwen2.5:3b-instruct-q5_0
+ollama serve
+python -m us_invest_ai.daily_workflow --config .\us_stocks\config\with_llm_ollama_local.yaml --run-label ollama_local
+```
+
+The checked-in example uses `OPENAI_API_KEY=dummy` because Ollama ignores the key, but you should still replace `SEC_USER_AGENT` with your real contact email before repeated SEC fetches.
 
 Write the paper portfolio state forward automatically:
 

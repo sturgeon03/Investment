@@ -138,6 +138,8 @@ celerybeat.pid
 .env
 .envrc
 .venv
+us_stocks/.env.us.*
+!us_stocks/.env.us.*.example
 env/
 venv/
 ENV/
@@ -206,9 +208,18 @@ us_stocks/automation/latest_status.json
 us_stocks/automation/ledger/
 us_stocks/automation/launcher/
 us_stocks/automation/locks/
+us_stocks/automation/night_shift/
 us_stocks/automation/runs/
+us_stocks/artifacts/ticker_signal_audit/
 us_stocks/data_large_cap_60_dynamic_eligibility/raw/refresh_run_manifest.json
 us_stocks/data_large_cap_60_dynamic_eligibility/raw/yfinance_cache/
+us_stocks/documents/*_sec_filings.csv
+us_stocks/documents/*_sec_sections.csv
+us_stocks/paper/ollama_local/
+us_stocks/runs/ollama_local/
+us_stocks/runs/ollama_local_night/
+us_stocks/signals/*_llm_scores.generated.csv
+us_stocks/signals/*_sec_llm_document_scores.csv
 
 # Local Codex and pytest scratch
 .codex_cache_validation/

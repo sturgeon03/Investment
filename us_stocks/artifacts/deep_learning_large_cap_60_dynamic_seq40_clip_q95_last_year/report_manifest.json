@@ -1,6 +1,10 @@
 {
   "config": {
     "backtest": {
+      "liquidity_lookback_days": 20,
+      "market_impact_bps": 0.0,
+      "market_impact_exponent": 0.5,
+      "spread_cost_bps": 0.0,
       "transaction_cost_bps": 10.0
     },
     "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_60_dynamic_eligibility.yaml",
@@ -134,7 +138,7 @@
   },
   "config_file_sha256": "d8ee9ce8494f79c476efccd173fe26760b2053c6f8ac895b8285852949471400",
   "config_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\config\\soft_price_large_cap_60_dynamic_eligibility.yaml",
-  "config_snapshot_sha256": "3224e5992e2b83d548339313f77a287a217234337fcb0fb372be7a7d03e72654",
+  "config_snapshot_sha256": "70456971f07c28a73b8c4ee3b4914903af84bc1718853b4e601dc9a98cf04be4",
   "experiment_name": "deep_learning_report",
   "extra": {
     "batch_size": 128,
@@ -147,7 +151,7 @@
     "lookback_days": 365,
     "lstm_hidden_dim": 12,
     "market_data_manifest_path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\data_large_cap_60_dynamic_eligibility\\raw\\market_data_manifest.json",
-    "market_data_manifest_sha256": "24fd616b02de86ecc961898434bd1dfae5e469b1b3935570b5317ad3f4ba722d",
+    "market_data_manifest_sha256": "395bafe054281b3eed6233bc7b78ee0a03b0f3a3410975df1726e77989df93e1",
     "market_data_source": "cache",
     "max_epochs": 250,
     "min_training_samples": 252,
@@ -175,10 +179,10 @@
     "validation_window_days": 60,
     "weight_decay": 0.0001
   },
-  "generated_at_utc": "2026-03-19T20:30:17.300065+00:00",
+  "generated_at_utc": "2026-03-29T17:27:54.732616+00:00",
   "git": {
     "branch": "main",
-    "commit": "a3c59a9d256832035f931d391311f03d69b349c9",
+    "commit": "5b2295ae645ef847dce6a1bc0b8edee97a5ff4f9",
     "dirty": true
   },
   "inputs": {
@@ -227,7 +231,7 @@
     "summary": {
       "exists": true,
       "path": "C:\\Users\\sym89\\Desktop\\Investment\\us_stocks\\artifacts\\deep_learning_large_cap_60_dynamic_seq40_clip_q95_last_year\\deep_learning_summary_last_year.csv",
-      "sha256": "56047c576d752f2534dd61463a941e924f4fd29c2c2eb0de3ab987c90a0dfcd3"
+      "sha256": "96000eb7e8111ca5a84146e54c488e3949e6117910cbe82d72195388c082574b"
     },
     "tcn_history": {
       "exists": true,

@@ -9,6 +9,7 @@ import pandas as pd
 from us_invest_ai.llm_scoring import (
     HeuristicScorer,
     aggregate_document_scores,
+    build_messages,
     normalize_multi_horizon_payload,
     normalize_score_payload,
     score_documents,
@@ -91,6 +92,22 @@ class LLMScoringTests(unittest.TestCase):
         self.assertAlmostEqual(swing_row["llm_score"], 0.475, places=2)
         self.assertEqual(int(swing_row["document_count"]), 1)
         self.assertEqual(int(swing_row["section_count"]), 2)
+
+    def test_build_messages_accepts_string_dates(self) -> None:
+        document = pd.Series(
+            {
+                "date": "2025-03-01",
+                "ticker": "AAA",
+                "title": "Update",
+                "text": "Demand improved.",
+                "doc_type": "sec_section",
+                "source": "test",
+            }
+        )
+
+        messages = build_messages(document)
+
+        self.assertIn("Date: 2025-03-01", messages[1]["content"])
 
     def test_load_llm_scores_filters_requested_horizon(self) -> None:
         sample = """date,ticker,horizon_bucket,llm_score,document_count,section_count,avg_confidence,avg_risk_flag
