@@ -49,7 +49,93 @@ function ConvertTo-CompactJson {
         [object]$Payload
     )
 
-    return ($Payload | ConvertTo-Json -Depth 8 -Compress)
+    $safePayload = ConvertTo-JsonSafeValue -Value $Payload
+    return ($safePayload | ConvertTo-Json -Depth 8 -Compress)
+}
+
+function ConvertTo-JsonSafeValue {
+    param(
+        [object]$Value
+    )
+
+    if ($null -eq $Value) {
+        return $null
+    }
+
+    if (
+        $Value -is [string] -or
+        $Value -is [char] -or
+        $Value -is [bool] -or
+        $Value -is [byte] -or
+        $Value -is [sbyte] -or
+        $Value -is [int16] -or
+        $Value -is [uint16] -or
+        $Value -is [int32] -or
+        $Value -is [uint32] -or
+        $Value -is [int64] -or
+        $Value -is [uint64] -or
+        $Value -is [single] -or
+        $Value -is [double] -or
+        $Value -is [decimal]
+    ) {
+        return $Value
+    }
+
+    if ($Value -is [datetime] -or $Value -is [datetimeoffset]) {
+        return $Value.ToString("o")
+    }
+
+    if ($Value -is [System.Management.Automation.ErrorRecord]) {
+        return [ordered]@{
+            type = "System.Management.Automation.ErrorRecord"
+            message = if ($Value.Exception) {
+                [string]$Value.Exception.Message
+            }
+            else {
+                [string]$Value
+            }
+            category = [string]$Value.CategoryInfo
+            fully_qualified_error_id = [string]$Value.FullyQualifiedErrorId
+        }
+    }
+
+    if ($Value -is [System.Exception]) {
+        return [ordered]@{
+            type = $Value.GetType().FullName
+            message = [string]$Value.Message
+        }
+    }
+
+    if ($Value -is [System.Collections.IDictionary]) {
+        $result = [ordered]@{}
+        foreach ($key in $Value.Keys) {
+            $result[[string]$key] = ConvertTo-JsonSafeValue -Value $Value[$key]
+        }
+        return $result
+    }
+
+    if ($Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])) {
+        $items = New-Object System.Collections.Generic.List[object]
+        foreach ($item in $Value) {
+            $items.Add((ConvertTo-JsonSafeValue -Value $item))
+        }
+        return @($items.ToArray())
+    }
+
+    if ($Value -is [System.Management.Automation.PSObject]) {
+        $result = [ordered]@{}
+        foreach ($property in $Value.PSObject.Properties) {
+            try {
+                $result[[string]$property.Name] = ConvertTo-JsonSafeValue -Value $property.Value
+            }
+            catch {
+                $result[[string]$property.Name] = [string]$property
+            }
+        }
+        return $result
+    }
+
+    return [string]$Value
 }
 
 $defaultUsStocksRoot = Split-Path -Parent $PSScriptRoot
@@ -263,13 +349,30 @@ finally {
         }
     }
 
-    $summaryJson = ConvertTo-CompactJson -Payload $summary
-    Set-Content -Encoding UTF8 -Path $summaryPath -Value $summaryJson
-    Set-Content -Encoding UTF8 -Path $latestStatusPath -Value $summaryJson
-    Add-Content -Encoding UTF8 -Path $ledgerPath -Value $summaryJson
+    try {
+        $summaryJson = ConvertTo-CompactJson -Payload $summary
+        Set-Content -Encoding UTF8 -Path $summaryPath -Value $summaryJson
+        Set-Content -Encoding UTF8 -Path $latestStatusPath -Value $summaryJson
+        Add-Content -Encoding UTF8 -Path $ledgerPath -Value $summaryJson
+    }
+    catch {
+        $summaryWriteError = $_.Exception.Message
+        if ([string]::IsNullOrWhiteSpace($summaryWriteError)) {
+            $summaryWriteError = ($_ | Out-String).Trim()
+        }
 
-    if (Test-Path $lockDir) {
-        Remove-Item -Recurse -Force $lockDir
+        if ([string]::IsNullOrWhiteSpace($errorMessage)) {
+            $errorMessage = "Failed to persist overnight summary: $summaryWriteError"
+        }
+        else {
+            $errorMessage = "$errorMessage Summary persistence failure: $summaryWriteError"
+        }
+        $success = $false
+    }
+    finally {
+        if (Test-Path $lockDir) {
+            Remove-Item -Recurse -Force $lockDir
+        }
     }
 
     if (-not $success) {
