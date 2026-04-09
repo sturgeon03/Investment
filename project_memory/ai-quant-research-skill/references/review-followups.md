@@ -31,6 +31,7 @@ This file tracks which external review findings were already addressed in the lo
 - Extended the focused transformer sweep to cover sequence-lookback length and target-clipping objective design, and confirmed that clipped targets beat the raw objective while `seq40` wins the latest-year slice and `seq20` wins repeated-window average.
 - Added report-stack plumbing so the standard last-year report can take the stronger `seq40 + clip_q95` default and the repeated-window report can take the safer `seq20 + clip_q95` default.
 - Added a canonical `run_us_report_stack.ps1` entrypoint for the promoted clipped-objective defaults.
+- Added a signal-hardening degradation report that reads the promoted last-year and repeated-window summaries, emits a robustness leaderboard plus JSON and Markdown guidance artifacts, and now runs inside `run_us_report_stack.ps1`.
 - Hardened overnight PowerShell summary persistence so cache-backed reruns no longer lose `run_summary.json`, `latest_status.json`, or ledger appends when PowerShell surfaces non-JSON-friendly runtime objects during final status writing, and the single-writer lock now still clears on that failure path.
 - Added the first shared-core split through `invest_ai_core`, starting with reusable config loading and market-data bundle logic while keeping `us_invest_ai` compatibility wrappers intact.
 - Extended the shared core into `invest_ai_core.performance`, moving the generic summary-metric layer out of `us_invest_ai.backtest` while preserving the old import path.
@@ -59,6 +60,7 @@ This file tracks which external review findings were already addressed in the lo
 - Extend the shared-core split beyond the current evaluation and artifact-output helpers into the next genuinely market-agnostic report/runtime seam.
 - Harden the first KR research lane beyond the initial rules-vs-walk-forward-ridge baseline, likely by adding fuller purged validation and more realistic learned-model evaluation.
 - Add lightweight smoke coverage around the PowerShell automation wrappers so summary persistence and ledger-write regressions are caught before the next overnight batch.
+- Turn the new signal-hardening degradation thresholds into explicit pass/fail promotion gates instead of advisory artifacts only.
 
 ## Interpretation Rule
 

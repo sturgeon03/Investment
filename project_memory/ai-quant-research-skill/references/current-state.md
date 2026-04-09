@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-04-01
+Last updated: 2026-04-09
 
 ## Repository Status
 
@@ -355,6 +355,26 @@ Interpretation:
 - `sequence_lookback_window = 40` is strongest on the latest 1-year slice, while `20` is stronger on repeated-window average
 - this strengthens the view that current bottlenecks are objective design, calibration, and realism, not simply more width or recurrence
 
+Signal hardening degradation analysis on the promoted dynamic 60-name lane:
+
+- repeated-window robustness leaderboard on the promoted report outputs:
+  transformer average gap vs baseline about `$5,123`
+  transformer worst window gap about `$-12,020`
+  transformer latest promoted report gap about `$11,353`
+  tree average gap vs baseline about `$3,801`
+  tree worst window gap about `$-2,285`
+  tree latest promoted report gap about `$-2,901`
+- promotion tiers from the new degradation readout:
+  promote: `transformer_walkforward`, `tree_walkforward`
+  challenger: `ridge_walkforward`, `mlp_walkforward`
+  deprioritize: `configured_baseline`, `hybrid_sequence_walkforward`, `tcn_walkforward`, `lstm_walkforward`
+
+Interpretation:
+
+- transformer remains the strongest combined promotion lane because it still leads the repeated-window average and keeps a positive latest-year gap
+- tree is now a useful robustness control because its repeated-window damage is milder, even though its latest promoted report still trails the baseline
+- future model promotion should be gated by repeated-window degradation and worst-window damage, not by latest-window upside alone
+
 ## Main Gaps
 
 The biggest remaining gaps are:
@@ -389,6 +409,7 @@ The local workspace has now hardened several items that were previously weak or 
 - the repo now also has a focused transformer sweep tool for baseline-vs-transformer robustness checks across sequence lookback and target-clipping objective choices
 - the standard report stack now has a canonical rerun path through `run_us_report_stack.ps1`, with the latest-year report refreshed on the stronger `seq40 + clip_q95` path and the repeated-window report refreshed on the safer `seq20 + clip_q95` path
 - the refreshed strict dynamic-lane reports confirm the current split: latest-year ending capital is about `$127.8k` for transformer vs `$118.3k` baseline, while repeated-window average ending capital is about `$121.3k` for transformer vs `$115.6k` baseline
+- the standard report stack now also emits signal-hardening degradation artifacts, so the promoted transformer lane can be judged on repeated-window damage and latest-vs-stability drift instead of headline ending capital alone
 - the first shared-core split is now in place through `invest_ai_core`, which holds the market-agnostic config loader, market-data bundle, manifest helpers, artifact-output helpers, performance summary layer, shared reporting helpers, and reusable backtest-window evaluation helpers while preserving `us_invest_ai.config`, `us_invest_ai.data`, `us_invest_ai.backtest.build_summary`, and report-wrapper compatibility
 - `kr_stocks` is no longer just an empty placeholder; it now has a Korea-market scaffold plus executable adapter code for KR config loading, ticker normalization, calendar/session alignment, DART filing normalization, a first DART list client, a first historical daily market-data client, a first research-ready bundle assembler, a first runnable raw-data pipeline with cache/provenance manifests, a first feature-assembly layer that merges price bars with benchmark-relative and filing-event context, a first monthly research/backtest lane, and a first rules-vs-walk-forward-ridge comparison path with optional benchmark handling and CLI coverage
 
